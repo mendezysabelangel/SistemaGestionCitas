@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SistemaGesionCitas.src.Models
+namespace SistemaGestionCitas.src.Forms
 {
-    internal class Usuario
+    internal class Login
     {
     }
 }

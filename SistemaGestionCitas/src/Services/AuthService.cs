@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SistemaGesionCitas.src.Data
+namespace SistemaGestionCitas.src.Services
 {
-    internal class Usuarios
+    internal class AuthService
     {
     }
 }
