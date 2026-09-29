@@ -1,4 +1,4 @@
-namespace SistemaGesionCitas
+namespace SistemaGestionCitas
 {
     internal static class Program
     {
@@ -10,8 +10,10 @@ namespace SistemaGesionCitas
         {
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            //ApplicationConfiguration.Initialize();
+            //Application.Run(new Form1());
+
+            Console.WriteLine("Hola");
         }
     }
 }
