@@ -77,5 +77,15 @@
         {
 
         }
+
+        private void lblLockIcon_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblTitulo_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

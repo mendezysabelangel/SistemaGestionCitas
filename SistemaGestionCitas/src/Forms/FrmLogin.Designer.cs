@@ -249,6 +249,7 @@
             lblTitulo.Size = new Size(267, 54);
             lblTitulo.TabIndex = 1;
             lblTitulo.Text = "Iniciar sesión";
+            lblTitulo.Click += lblTitulo_Click;
             // 
             // lblLockIcon
             // 
@@ -262,6 +263,7 @@
             lblLockIcon.TabIndex = 0;
             lblLockIcon.Text = "🔒";
             lblLockIcon.TextAlign = ContentAlignment.MiddleCenter;
+            lblLockIcon.Click += lblLockIcon_Click;
             // 
             // FrmLogin
             // 
