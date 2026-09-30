@@ -1,3 +1,5 @@
+using SistemaGestionCitas.src.Forms;
+
 namespace SistemaGestionCitas
 {
     internal static class Program
@@ -8,12 +10,11 @@ namespace SistemaGestionCitas
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
+           
             //ApplicationConfiguration.Initialize();
-            //Application.Run(new Form1());
-
-            Console.WriteLine("Hola");
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new Prueba());
         }
     }
 }
