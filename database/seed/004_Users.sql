@@ -12,7 +12,7 @@ BEGIN
     INSERT INTO Usuarios (NombreUsuario, PasswordHash, NombreCompleto, IdRol)
     SELECT
         'admin',
-        'HASH_PENDIENTE',
+        '100000.OMSmNC9EtSMCp4Y5AFaiHg==.UfngOthZVPit7GG78jjylQx4/lWJYu+l557u2nm7Bzw=',
         'Administrador del Sistema',
         IdRol
     FROM Roles
@@ -25,7 +25,7 @@ BEGIN
     INSERT INTO Usuarios (NombreUsuario, PasswordHash, NombreCompleto, IdRol)
     SELECT
         'supervisor',
-        'HASH_PENDIENTE',
+        '100000./Gx+AaKjnvwKZesuiE1Ppw==.LR55+gJVnHSZOon+IymxjwwYTMU3Yb+vGrzl2yPxfxE=',
         'Supervisor del Sistema',
         IdRol
     FROM Roles
@@ -38,7 +38,7 @@ BEGIN
     INSERT INTO Usuarios (NombreUsuario, PasswordHash, NombreCompleto, IdRol)
     SELECT
         'ejecutor',
-        'HASH_PENDIENTE',
+        '100000.lW1oYh5xON2gB2qREjjKRg==.kciRv6fTFJtwIhX9Lv6u3V7zJRsuDgALOI8uDqHMgoQ=',
         'Ejecutor del Sistema',
         IdRol
     FROM Roles
