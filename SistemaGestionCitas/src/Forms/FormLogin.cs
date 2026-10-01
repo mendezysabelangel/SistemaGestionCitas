@@ -24,6 +24,8 @@ namespace SistemaGestionCitas.src.Forms
         private readonly Button btnVerPassword = new Button();
         private readonly Button btnIniciar = new Button();
         private readonly Button btnSalir = new Button();
+        private readonly Button btnCambiarPantalla = new Button();
+
 
         public FormLogin()
         {
@@ -70,7 +72,7 @@ namespace SistemaGestionCitas.src.Forms
             pnlDerecho.Resize += (sender, e) => CentrarContenido();
 
             Panel pnlTarjeta = new Panel();
-            pnlTarjeta.Size = new Size(430, 375);
+            pnlTarjeta.Size = new Size(430, 430);
             pnlTarjeta.Location = new Point(0, 0);
             pnlTarjeta.BackColor = Color.White;
             pnlTarjeta.BorderStyle = BorderStyle.FixedSingle;
@@ -142,6 +144,19 @@ namespace SistemaGestionCitas.src.Forms
             btnSalir.Click += BtnSalir_Click;
             pnlTarjeta.Controls.Add(btnSalir);
 
+            //Botón cambiar pantalla
+            btnCambiarPantalla.Text = "¿No tienes una cuenta? Haz click aquí";
+            btnCambiarPantalla.Location = new Point(62, 375);
+            btnCambiarPantalla.Size = new Size(300, 40);
+            btnCambiarPantalla.BackColor = Color.White;
+            btnCambiarPantalla.ForeColor = azul;
+            btnCambiarPantalla.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            btnCambiarPantalla.FlatStyle = FlatStyle.Flat;
+            btnCambiarPantalla.FlatAppearance.BorderSize = 0;
+            btnCambiarPantalla.Cursor = Cursors.Hand;
+            btnCambiarPantalla.Click += BtnCambiarPantalla_Click;
+            pnlTarjeta.Controls.Add(btnCambiarPantalla);
+
 
             pnlCentro.Size = new Size(430, 459);
             pnlCentro.BackColor = Color.Transparent;
@@ -212,17 +227,29 @@ namespace SistemaGestionCitas.src.Forms
                 return;
             }
 
-            MessageBox.Show(
-                resultado.Mensaje + "\nRol: " + resultado.Usuario!.NombreRol,
-                "Acceso concedido", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            //MessageBox.Show(
+            //    resultado.Mensaje + "\nRol: " + resultado.Usuario!.NombreRol,
+            //    "Acceso concedido", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            txtPassword.Clear();
+            //txtPassword.Clear();
+
+            FrmDashboard dashboard = new FrmDashboard();
+            dashboard.Show();
+            this.Hide();
         }
 
         // Botón Salir
         private void BtnSalir_Click(object? sender, EventArgs e)
         {
             Application.Exit();
+        }
+
+        // Botón cambiar de pantalla
+        private void BtnCambiarPantalla_Click(object? sender, EventArgs e)
+        {
+            CrearUsuario crearUsuario = new CrearUsuario();
+            crearUsuario.Show();
+            this.Hide();
         }
     }
 }

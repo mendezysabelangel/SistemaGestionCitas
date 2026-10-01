@@ -5,54 +5,40 @@ using System.Data;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
+using SistemaGestionCitas.src.Models;
+using SistemaGestionCitas.src.Services;
 
 namespace SistemaGestionCitas.src.Forms
 {
     public partial class CrearUsuario : Form
     {
+        private readonly UsuarioService usuarioService = new UsuarioService();
+
         public CrearUsuario()
         {
             InitializeComponent();
-        }
 
-        private void label1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label1_Click_1(object sender, EventArgs e)
-        {
-
-        }
-
-        private void lblNombreCompleto_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label1_Click_2(object sender, EventArgs e)
-        {
-
-        }
-
-        private void lblCorreo_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void CrearUsuario_Load(object sender, EventArgs e)
-        {
-
+            txtNombreCompleto.MaxLength = 100;
+            txtNombreUsuario.MaxLength = 50;
+            txtCorreo.MaxLength = 100;
+            txtPassword.MaxLength = 100;
+            txtConfirmarPassword.MaxLength = 100;
         }
 
         private void btnCancelar_Click(object sender, EventArgs e)
         {
-            this.Hide();
+            VolverAlLogin();
+        }
 
-            FormLogin ventanaInicio = new FormLogin();
-            ventanaInicio.ShowDialog();
+        private void VolverAlLogin()
+        {
+            FormLogin? login = Application.OpenForms.OfType<FormLogin>().FirstOrDefault();
 
-            this.Show();
+            if (login == null)
+                login = new FormLogin();
+
+            login.Show();
+            this.Close();
         }
 
         private void btnCrearUsuario_Click(object sender, EventArgs e)
@@ -177,49 +163,71 @@ namespace SistemaGestionCitas.src.Forms
             }
 
             // Todos los datos pasaron las validaciones
+            btnCrearUsuario.Enabled = false;
+
+            ResultadoOperacion resultado;
+            try
+            {
+                resultado = usuarioService.RegistrarUsuarioEjecutor(
+                    nombreCompleto, nombreUsuario, correo, password);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "No se pudo conectar con la base de datos.\n\n" + ex.Message,
+                    "Error de conexión",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                btnCrearUsuario.Enabled = true;
+                return;
+            }
+
+            btnCrearUsuario.Enabled = true;
+
+            if (!resultado.Exitoso)
+            {
+                MessageBox.Show(
+                    resultado.Mensaje,
+                    "No se pudo crear el usuario",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
             MessageBox.Show(
-                "Los datos son válidos.",
-                "Correcto",
+                resultado.Mensaje,
+                "Usuario creado",
                 MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            );
+                MessageBoxIcon.Information);
 
-            // AQUÍ VA EL INSERT A LA BASE DE DATOS
-
-            // Después de que el INSERT sea exitoso,
-            // entonces se abre el Dashboard.
-
-            this.Hide();
-
-            FrmDashboard ventanaDashboard = new FrmDashboard();
-            ventanaDashboard.ShowDialog();
-
-            this.Close();
+            VolverAlLogin();
         }
 
         private void txtNombreCompleto_TextChanged(object sender, EventArgs e)
         {
-           
+
         }
 
         private void txtNombreUsuario_TextChanged(object sender, EventArgs e)
         {
-           
+
         }
 
         private void txtCorreo_TextChanged(object sender, EventArgs e)
         {
-            
+
         }
 
         private void txtPassword_TextChanged(object sender, EventArgs e)
         {
-            
+
         }
 
         private void txtConfirmarPassword_TextChanged(object sender, EventArgs e)
         {
-            
+
         }
+
     }
 }

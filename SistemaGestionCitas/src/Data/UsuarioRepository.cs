@@ -70,5 +70,44 @@ namespace SistemaGestionCitas.src.Data
         {
             ActualizarIntentos(idUsuario, 0, null);
         }
+
+        public bool ExisteNombreUsuario(string nombreUsuario)
+        {
+            string sql = "SELECT COUNT(*) FROM Usuarios WHERE NombreUsuario = @nombreUsuario";
+
+            using (SqlConnection con = conexion.CrearConexion())
+            using (SqlCommand cmd = new SqlCommand(sql, con))
+            {
+                cmd.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
+                con.Open();
+
+                int cantidad = (int)cmd.ExecuteScalar();
+                return cantidad > 0;
+            }
+        }
+
+        public bool CrearUsuarioConRol(string nombreUsuario, string passwordHash,
+                                       string nombreCompleto, string? correo, string nombreRol)
+        {
+            string sql = @"INSERT INTO Usuarios (NombreUsuario, PasswordHash, NombreCompleto, Correo, IdRol)
+                           SELECT @nombreUsuario, @passwordHash, @nombreCompleto, @correo, IdRol
+                           FROM Roles
+                           WHERE Nombre = @nombreRol AND Activo = 1";
+
+            using (SqlConnection con = conexion.CrearConexion())
+            using (SqlCommand cmd = new SqlCommand(sql, con))
+            {
+                cmd.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
+                cmd.Parameters.AddWithValue("@passwordHash", passwordHash);
+                cmd.Parameters.AddWithValue("@nombreCompleto", nombreCompleto);
+                cmd.Parameters.AddWithValue("@correo", (object?)correo ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@nombreRol", nombreRol);
+
+                con.Open();
+
+                int filas = cmd.ExecuteNonQuery();
+                return filas > 0;
+            }
+        }
     }
 }
