@@ -178,6 +178,7 @@
             pnlTopbar.Name = "pnlTopbar";
             pnlTopbar.Size = new Size(1188, 112);
             pnlTopbar.TabIndex = 1;
+            pnlTopbar.Paint += pnlTopbar_Paint;
             // 
             // lblRol
             // 

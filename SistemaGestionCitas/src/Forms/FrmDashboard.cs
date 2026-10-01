@@ -9,6 +9,9 @@ namespace SistemaGestionCitas.src.Forms
         {
             InitializeComponent();
             CargarSesion();
+
+            FormClosed += FrmDashboard_FormClosed;
+
         }
 
         private void CargarSesion()
@@ -50,12 +53,22 @@ namespace SistemaGestionCitas.src.Forms
             Close();
         }
 
+        private void FrmDashboard_FormClosed(object? sender, FormClosedEventArgs e)
+        {
+            SesionActual.CerrarSesion();
+        }
+
         private void lblSistema_Click(object sender, EventArgs e)
         {
 
         }
 
         private void lblUsuario_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pnlTopbar_Paint(object sender, PaintEventArgs e)
         {
 
         }
