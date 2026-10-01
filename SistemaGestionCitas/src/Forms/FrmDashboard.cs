@@ -30,21 +30,15 @@ namespace SistemaGestionCitas.src.Forms
 
             // Solo usuarios con permiso de crear usuarios internos
             // podrán ver esta opción.
-            btnUsuarios.Visible =
+            btnCrearUsuario.Visible =
+                SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
+            btnUsuario.Visible =
                 SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
         }
 
         private void btnUsuarios_Click(object sender, EventArgs e)
         {
-            if (!SesionActual.VerificarPermiso(
-                PermisosSistema.CrearUsuarios,
-                "crear usuarios"))
-            {
-                return;
-            }
 
-            using CrearUsuario formulario = new CrearUsuario();
-            formulario.ShowDialog(this);
         }
 
         private void btnCerrarSesion_Click(object sender, EventArgs e)
@@ -71,6 +65,21 @@ namespace SistemaGestionCitas.src.Forms
         private void pnlTopbar_Paint(object sender, PaintEventArgs e)
         {
 
+        }
+
+
+
+        private void btnCrearUsuario_Click(object sender, EventArgs e)
+        {
+            if (!SesionActual.VerificarPermiso(
+                PermisosSistema.CrearUsuarios,
+                "crear usuarios"))
+            {
+                return;
+            }
+
+            using CrearUsuario formulario = new CrearUsuario();
+            formulario.ShowDialog(this);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace SistemaGestionCitas.src.Forms
 
         private void btnCancelar_Click(object sender, EventArgs e)
         {
-            VolverAlLogin();
+            this.Close();
         }
 
         private void VolverAlLogin()
@@ -201,7 +201,7 @@ namespace SistemaGestionCitas.src.Forms
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
-            VolverAlLogin();
+            this.Close();
         }
 
         private void txtNombreCompleto_TextChanged(object sender, EventArgs e)

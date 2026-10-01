@@ -72,7 +72,7 @@ namespace SistemaGestionCitas.src.Forms
             pnlDerecho.Resize += (sender, e) => CentrarContenido();
 
             Panel pnlTarjeta = new Panel();
-            pnlTarjeta.Size = new Size(430, 430);
+            pnlTarjeta.Size = new Size(430, 390);
             pnlTarjeta.Location = new Point(0, 0);
             pnlTarjeta.BackColor = Color.White;
             pnlTarjeta.BorderStyle = BorderStyle.FixedSingle;
@@ -143,20 +143,6 @@ namespace SistemaGestionCitas.src.Forms
             btnSalir.Cursor = Cursors.Hand;
             btnSalir.Click += BtnSalir_Click;
             pnlTarjeta.Controls.Add(btnSalir);
-
-            //Botón cambiar pantalla
-            btnCambiarPantalla.Text = "¿No tienes una cuenta? Haz click aquí";
-            btnCambiarPantalla.Location = new Point(62, 375);
-            btnCambiarPantalla.Size = new Size(300, 40);
-            btnCambiarPantalla.BackColor = Color.White;
-            btnCambiarPantalla.ForeColor = azul;
-            btnCambiarPantalla.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
-            btnCambiarPantalla.FlatStyle = FlatStyle.Flat;
-            btnCambiarPantalla.FlatAppearance.BorderSize = 0;
-            btnCambiarPantalla.Cursor = Cursors.Hand;
-            btnCambiarPantalla.Click += BtnCambiarPantalla_Click;
-            pnlTarjeta.Controls.Add(btnCambiarPantalla);
-
 
             pnlCentro.Size = new Size(430, 459);
             pnlCentro.BackColor = Color.Transparent;
