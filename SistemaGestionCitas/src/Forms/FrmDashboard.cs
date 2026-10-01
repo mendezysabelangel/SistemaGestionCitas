@@ -34,6 +34,8 @@ namespace SistemaGestionCitas.src.Forms
                 SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
             btnUsuario.Visible =
                 SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
+            btnCrearRol.Visible =
+                SesionActual.TienePermiso(PermisosSistema.CrearRoles);
         }
 
         private void btnUsuarios_Click(object sender, EventArgs e)
@@ -79,6 +81,18 @@ namespace SistemaGestionCitas.src.Forms
             }
 
             using CrearUsuario formulario = new CrearUsuario();
+            formulario.ShowDialog(this);
+        }
+        private void btnCrearRol_Click(object sender, EventArgs e)
+        {
+            if (!SesionActual.VerificarPermiso(
+                PermisosSistema.CrearRoles,
+                "crear nuevos roles"))
+            {
+                return;
+            }
+
+            using FrmCrearRol formulario = new FrmCrearRol();
             formulario.ShowDialog(this);
         }
     }

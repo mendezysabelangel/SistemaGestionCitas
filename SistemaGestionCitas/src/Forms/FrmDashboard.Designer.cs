@@ -22,6 +22,7 @@
             btnUsuario = new Button();
             btnCerrarSesion = new Button();
             btnCrearUsuario = new Button();
+            btnCrearRol = new Button();
             btnClientes = new Button();
             btnCitas = new Button();
             btnInicio = new Button();
@@ -57,6 +58,7 @@
             pnlSidebar.Controls.Add(btnUsuario);
             pnlSidebar.Controls.Add(btnCerrarSesion);
             pnlSidebar.Controls.Add(btnCrearUsuario);
+            pnlSidebar.Controls.Add(btnCrearRol);
             pnlSidebar.Controls.Add(btnClientes);
             pnlSidebar.Controls.Add(btnCitas);
             pnlSidebar.Controls.Add(btnInicio);
@@ -113,6 +115,23 @@
             btnCrearUsuario.Text = "Crear nuevo usuario";
             btnCrearUsuario.TextAlign = ContentAlignment.MiddleLeft;
             btnCrearUsuario.Click += btnCrearUsuario_Click;
+
+            // 
+            // btnCrearRol
+            // 
+            btnCrearRol.FlatAppearance.BorderSize = 0;
+            btnCrearRol.FlatStyle = FlatStyle.Flat;
+            btnCrearRol.Font = new Font("Segoe UI", 10F);
+            btnCrearRol.ForeColor = Color.FromArgb(70, 80, 95);
+            btnCrearRol.Location = new Point(13, 306);
+            btnCrearRol.Margin = new Padding(3, 2, 3, 2);
+            btnCrearRol.Name = "btnCrearRol";
+            btnCrearRol.Size = new Size(192, 34);
+            btnCrearRol.TabIndex = 8;
+            btnCrearRol.Text = "Crear nuevo rol";
+            btnCrearRol.TextAlign = ContentAlignment.MiddleLeft;
+            btnCrearRol.Click += btnCrearRol_Click;
+
             // 
             // btnClientes
             // 
@@ -404,6 +423,7 @@
         private Button btnClientes;
         private Button btnCrearUsuario;
         private Button btnCerrarSesion;
+        private Button btnCrearRol;
 
         private Panel pnlTopbar;
         private Label lblSeccion;
