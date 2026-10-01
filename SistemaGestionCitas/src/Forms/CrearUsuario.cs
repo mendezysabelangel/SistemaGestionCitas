@@ -44,5 +44,20 @@ namespace SistemaGestionCitas.src.Forms
         {
 
         }
+
+        private void btnCancelar_Click(object sender, EventArgs e)
+        {
+            this.Hide();
+
+            FormLogin ventanaCrearCuenta = new FormLogin();
+            ventanaCrearCuenta.ShowDialog();
+
+            this.Show();
+        }
+
+        private void btnCrearUsuario_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
