@@ -182,6 +182,7 @@
             txtNombreCompleto.PlaceholderText = "Ingrese el nombre completo";
             txtNombreCompleto.Size = new Size(400, 30);
             txtNombreCompleto.TabIndex = 0;
+            txtNombreCompleto.TextChanged += txtNombreCompleto_TextChanged;
             // 
             // lblNombreUsuario
             // 
@@ -201,6 +202,7 @@
             txtNombreUsuario.PlaceholderText = "Ingrese el nombre de usuario";
             txtNombreUsuario.Size = new Size(400, 30);
             txtNombreUsuario.TabIndex = 1;
+            txtNombreUsuario.TextChanged += txtNombreUsuario_TextChanged;
             // 
             // lblCorreo
             // 
@@ -220,6 +222,7 @@
             txtCorreo.PlaceholderText = "Ingrese el correo electrónico";
             txtCorreo.Size = new Size(400, 30);
             txtCorreo.TabIndex = 2;
+            txtCorreo.TextChanged += txtCorreo_TextChanged;
             // 
             // lblPassword
             // 
@@ -240,6 +243,7 @@
             txtPassword.Size = new Size(400, 30);
             txtPassword.TabIndex = 3;
             txtPassword.UseSystemPasswordChar = true;
+            txtPassword.TextChanged += txtPassword_TextChanged;
             // 
             // lblConfirmarPassword
             // 
@@ -260,6 +264,7 @@
             txtConfirmarPassword.Size = new Size(400, 30);
             txtConfirmarPassword.TabIndex = 4;
             txtConfirmarPassword.UseSystemPasswordChar = true;
+            txtConfirmarPassword.TextChanged += txtConfirmarPassword_TextChanged;
             // 
             // btnCrearUsuario
             // 
