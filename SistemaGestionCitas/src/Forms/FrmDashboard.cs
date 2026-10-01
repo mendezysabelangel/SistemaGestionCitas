@@ -1,0 +1,63 @@
+﻿using SistemaGestionCitas.src.Models;
+using SistemaGestionCitas.src.Services;
+
+namespace SistemaGestionCitas.src.Forms
+{
+    public partial class FrmDashboard : Form
+    {
+        public FrmDashboard()
+        {
+            InitializeComponent();
+            CargarSesion();
+        }
+
+        private void CargarSesion()
+        {
+            if (SesionActual.UsuarioActual == null)
+                return;
+
+            lblBienvenida.Text =
+                $"Bienvenido, {SesionActual.UsuarioActual.NombreCompleto}";
+
+            lblUsuario.Text =
+                SesionActual.UsuarioActual.NombreUsuario;
+
+            lblRol.Text =
+                SesionActual.UsuarioActual.NombreRol;
+
+            // Solo usuarios con permiso de crear usuarios internos
+            // podrán ver esta opción.
+            btnUsuarios.Visible =
+                SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
+        }
+
+        private void btnUsuarios_Click(object sender, EventArgs e)
+        {
+            if (!SesionActual.VerificarPermiso(
+                PermisosSistema.CrearUsuarios,
+                "crear usuarios"))
+            {
+                return;
+            }
+
+            using CrearUsuario formulario = new CrearUsuario();
+            formulario.ShowDialog(this);
+        }
+
+        private void btnCerrarSesion_Click(object sender, EventArgs e)
+        {
+            SesionActual.CerrarSesion();
+            Close();
+        }
+
+        private void lblSistema_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblUsuario_Click(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
