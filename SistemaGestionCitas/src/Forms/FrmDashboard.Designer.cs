@@ -44,6 +44,12 @@
             lblCitasHoyTitulo = new Label();
             lblDescripcion = new Label();
             lblBienvenida = new Label();
+            pnlPermisos = new Panel();
+            lblPermisos = new Label();
+            btnConsultar = new Button();
+            btnAgregar = new Button();
+            btnModificar = new Button();
+            btnEliminar = new Button();
             pnlSidebar.SuspendLayout();
             pnlTopbar.SuspendLayout();
             pnlContenido.SuspendLayout();
@@ -252,6 +258,7 @@
             pnlContenido.Controls.Add(pnlConfirmadas);
             pnlContenido.Controls.Add(pnlPendientes);
             pnlContenido.Controls.Add(pnlCitasHoy);
+            pnlContenido.Controls.Add(pnlPermisos);
             pnlContenido.Controls.Add(lblDescripcion);
             pnlContenido.Controls.Add(lblBienvenida);
             pnlContenido.Dock = DockStyle.Fill;
@@ -384,6 +391,98 @@
             lblBienvenida.Size = new Size(176, 41);
             lblBienvenida.TabIndex = 0;
             lblBienvenida.Text = "Bienvenido";
+
+            // 
+            // pnlPermisos
+            // 
+            pnlPermisos.BackColor = Color.White;
+            pnlPermisos.BorderStyle = BorderStyle.FixedSingle;
+            pnlPermisos.Controls.Add(btnEliminar);
+            pnlPermisos.Controls.Add(btnModificar);
+            pnlPermisos.Controls.Add(btnAgregar);
+            pnlPermisos.Controls.Add(btnConsultar);
+            pnlPermisos.Controls.Add(lblPermisos);
+            pnlPermisos.Location = new Point(35, 250);
+            pnlPermisos.Name = "pnlPermisos";
+            pnlPermisos.Size = new Size(709, 105);
+            pnlPermisos.TabIndex = 5;
+
+            // 
+            // lblPermisos
+            // 
+            lblPermisos.AutoSize = true;
+            lblPermisos.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblPermisos.ForeColor = Color.FromArgb(70, 80, 95);
+            lblPermisos.Location = new Point(18, 15);
+            lblPermisos.Name = "lblPermisos";
+            lblPermisos.Size = new Size(180, 19);
+            lblPermisos.TabIndex = 0;
+            lblPermisos.Text = "Acciones según tu rol";
+
+            // 
+            // btnConsultar
+            // 
+            btnConsultar.BackColor = Color.FromArgb(220, 232, 255);
+            btnConsultar.FlatAppearance.BorderSize = 0;
+            btnConsultar.FlatStyle = FlatStyle.Flat;
+            btnConsultar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnConsultar.ForeColor = Color.FromArgb(28, 69, 171);
+            btnConsultar.Location = new Point(18, 50);
+            btnConsultar.Name = "btnConsultar";
+            btnConsultar.Size = new Size(150, 35);
+            btnConsultar.TabIndex = 1;
+            btnConsultar.Text = "Consultar";
+            btnConsultar.UseVisualStyleBackColor = false;
+            btnConsultar.Click += btnConsultar_Click;
+
+            // 
+            // btnAgregar
+            // 
+            btnAgregar.BackColor = Color.FromArgb(220, 232, 255);
+            btnAgregar.FlatAppearance.BorderSize = 0;
+            btnAgregar.FlatStyle = FlatStyle.Flat;
+            btnAgregar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnAgregar.ForeColor = Color.FromArgb(28, 69, 171);
+            btnAgregar.Location = new Point(190, 50);
+            btnAgregar.Name = "btnAgregar";
+            btnAgregar.Size = new Size(150, 35);
+            btnAgregar.TabIndex = 2;
+            btnAgregar.Text = "Agregar";
+            btnAgregar.UseVisualStyleBackColor = false;
+            btnAgregar.Click += btnAgregar_Click;
+
+            // 
+            // btnModificar
+            // 
+            btnModificar.BackColor = Color.FromArgb(220, 232, 255);
+            btnModificar.FlatAppearance.BorderSize = 0;
+            btnModificar.FlatStyle = FlatStyle.Flat;
+            btnModificar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnModificar.ForeColor = Color.FromArgb(28, 69, 171);
+            btnModificar.Location = new Point(362, 50);
+            btnModificar.Name = "btnModificar";
+            btnModificar.Size = new Size(150, 35);
+            btnModificar.TabIndex = 3;
+            btnModificar.Text = "Modificar";
+            btnModificar.UseVisualStyleBackColor = false;
+            btnModificar.Click += btnModificar_Click;
+
+            // 
+            // btnEliminar
+            // 
+            btnEliminar.BackColor = Color.FromArgb(220, 232, 255);
+            btnEliminar.FlatAppearance.BorderSize = 0;
+            btnEliminar.FlatStyle = FlatStyle.Flat;
+            btnEliminar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnEliminar.ForeColor = Color.FromArgb(28, 69, 171);
+            btnEliminar.Location = new Point(534, 50);
+            btnEliminar.Name = "btnEliminar";
+            btnEliminar.Size = new Size(150, 35);
+            btnEliminar.TabIndex = 4;
+            btnEliminar.Text = "Eliminar";
+            btnEliminar.UseVisualStyleBackColor = false;
+            btnEliminar.Click += btnEliminar_Click;
+
             // 
             // FrmDashboard
             // 
@@ -446,5 +545,13 @@
         private Label lblConfirmadasTitulo;
         private Label lblConfirmadasNumero;
         private Button btnUsuario;
+
+        private Panel pnlPermisos;
+        private Label lblPermisos;
+
+        private Button btnConsultar;
+        private Button btnAgregar;
+        private Button btnModificar;
+        private Button btnEliminar;
     }
 }

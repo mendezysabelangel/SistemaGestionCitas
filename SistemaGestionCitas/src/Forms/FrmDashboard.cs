@@ -11,7 +11,6 @@ namespace SistemaGestionCitas.src.Forms
             CargarSesion();
 
             FormClosed += FrmDashboard_FormClosed;
-
         }
 
         private void CargarSesion()
@@ -28,50 +27,116 @@ namespace SistemaGestionCitas.src.Forms
             lblRol.Text =
                 SesionActual.UsuarioActual.NombreRol;
 
-            // Solo usuarios con permiso de crear usuarios internos
-            // podrán ver esta opción.
+            // Opciones administrativas
             btnCrearUsuario.Visible =
                 SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
+
             btnUsuario.Visible =
                 SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
+
             btnCrearRol.Visible =
                 SesionActual.TienePermiso(PermisosSistema.CrearRoles);
+
+            // Mostrar visualmente los permisos del rol
+            ConfigurarBotonPermiso(
+                btnConsultar,
+                PermisosSistema.Consultar);
+
+            ConfigurarBotonPermiso(
+                btnAgregar,
+                PermisosSistema.Agregar);
+
+            ConfigurarBotonPermiso(
+                btnModificar,
+                PermisosSistema.Modificar);
+
+            ConfigurarBotonPermiso(
+                btnEliminar,
+                PermisosSistema.Eliminar);
         }
 
-        private void btnUsuarios_Click(object sender, EventArgs e)
+        private void ConfigurarBotonPermiso(
+            Button boton,
+            string permiso)
         {
+            bool permitido =
+                SesionActual.TienePermiso(permiso);
 
+            if (permitido)
+            {
+                boton.BackColor =
+                    Color.FromArgb(220, 232, 255);
+
+                boton.ForeColor =
+                    Color.FromArgb(28, 69, 171);
+            }
+            else
+            {
+                boton.BackColor =
+                    Color.FromArgb(235, 237, 240);
+
+                boton.ForeColor =
+                    Color.Gray;
+            }
         }
 
-        private void btnCerrarSesion_Click(object sender, EventArgs e)
+        private void EjecutarAccion(
+            string permiso,
+            string accion)
         {
-            SesionActual.CerrarSesion();
-            Close();
+            if (!SesionActual.VerificarPermiso(
+                permiso,
+                accion))
+            {
+                return;
+            }
+
+            MessageBox.Show(
+                $"Acceso permitido.\n\nSu rol puede {accion}.",
+                "Permiso concedido",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
-        private void FrmDashboard_FormClosed(object? sender, FormClosedEventArgs e)
+        private void btnConsultar_Click(
+            object sender,
+            EventArgs e)
         {
-            SesionActual.CerrarSesion();
+            EjecutarAccion(
+                PermisosSistema.Consultar,
+                "consultar información");
         }
 
-        private void lblSistema_Click(object sender, EventArgs e)
+        private void btnAgregar_Click(
+            object sender,
+            EventArgs e)
         {
-
+            EjecutarAccion(
+                PermisosSistema.Agregar,
+                "agregar registros");
         }
 
-        private void lblUsuario_Click(object sender, EventArgs e)
+        private void btnModificar_Click(
+            object sender,
+            EventArgs e)
         {
-
+            EjecutarAccion(
+                PermisosSistema.Modificar,
+                "modificar registros");
         }
 
-        private void pnlTopbar_Paint(object sender, PaintEventArgs e)
+        private void btnEliminar_Click(
+            object sender,
+            EventArgs e)
         {
-
+            EjecutarAccion(
+                PermisosSistema.Eliminar,
+                "eliminar registros");
         }
 
-
-
-        private void btnCrearUsuario_Click(object sender, EventArgs e)
+        private void btnCrearUsuario_Click(
+            object sender,
+            EventArgs e)
         {
             if (!SesionActual.VerificarPermiso(
                 PermisosSistema.CrearUsuarios,
@@ -80,10 +145,15 @@ namespace SistemaGestionCitas.src.Forms
                 return;
             }
 
-            using CrearUsuario formulario = new CrearUsuario();
+            using CrearUsuario formulario =
+                new CrearUsuario();
+
             formulario.ShowDialog(this);
         }
-        private void btnCrearRol_Click(object sender, EventArgs e)
+
+        private void btnCrearRol_Click(
+            object sender,
+            EventArgs e)
         {
             if (!SesionActual.VerificarPermiso(
                 PermisosSistema.CrearRoles,
@@ -92,8 +162,49 @@ namespace SistemaGestionCitas.src.Forms
                 return;
             }
 
-            using FrmCrearRol formulario = new FrmCrearRol();
+            using FrmCrearRol formulario =
+                new FrmCrearRol();
+
             formulario.ShowDialog(this);
+        }
+
+        private void btnCerrarSesion_Click(
+            object sender,
+            EventArgs e)
+        {
+            SesionActual.CerrarSesion();
+            Close();
+        }
+
+        private void FrmDashboard_FormClosed(
+            object? sender,
+            FormClosedEventArgs e)
+        {
+            SesionActual.CerrarSesion();
+        }
+
+        private void btnUsuarios_Click(
+            object sender,
+            EventArgs e)
+        {
+        }
+
+        private void lblSistema_Click(
+            object sender,
+            EventArgs e)
+        {
+        }
+
+        private void lblUsuario_Click(
+            object sender,
+            EventArgs e)
+        {
+        }
+
+        private void pnlTopbar_Paint(
+            object sender,
+            PaintEventArgs e)
+        {
         }
     }
 }

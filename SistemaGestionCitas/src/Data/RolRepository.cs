@@ -102,5 +102,30 @@ namespace SistemaGestionCitas.src.Data
                 throw;
             }
         }
+        public List<string> ObtenerRolesActivos()
+        {
+            List<string> roles = new List<string>();
+
+            string sql =
+                @"SELECT Nombre
+          FROM Roles
+          WHERE Activo = 1
+          ORDER BY Nombre";
+
+            using SqlConnection con = conexion.CrearConexion();
+            using SqlCommand cmd = new SqlCommand(sql, con);
+
+            con.Open();
+
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                roles.Add(reader["Nombre"].ToString()!);
+            }
+
+            return roles;
+        }
+
     }
 }
