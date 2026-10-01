@@ -39,5 +39,10 @@ namespace SistemaGestionCitas.src.Forms
         {
 
         }
+
+        private void CrearUsuario_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }
