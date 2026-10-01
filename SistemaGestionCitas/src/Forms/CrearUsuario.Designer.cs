@@ -32,34 +32,25 @@
             lblMensajePrincipal = new Label();
             lblSubtituloSistema = new Label();
             lblNombreSistema = new Label();
-
             pnlFormulario = new Panel();
             lblIconoUsuario = new Label();
             lblTitulo = new Label();
             lblDescripcion = new Label();
-
             lblNombreCompleto = new Label();
             txtNombreCompleto = new TextBox();
-
             lblNombreUsuario = new Label();
             txtNombreUsuario = new TextBox();
-
             lblCorreo = new Label();
             txtCorreo = new TextBox();
-
             lblPassword = new Label();
             txtPassword = new TextBox();
-
             lblConfirmarPassword = new Label();
             txtConfirmarPassword = new TextBox();
-
             btnCrearUsuario = new Button();
             btnCancelar = new Button();
-
             pnlLateral.SuspendLayout();
             pnlFormulario.SuspendLayout();
             SuspendLayout();
-
             // 
             // pnlLateral
             // 
@@ -73,31 +64,16 @@
             pnlLateral.Name = "pnlLateral";
             pnlLateral.Size = new Size(360, 700);
             pnlLateral.TabIndex = 0;
-
             // 
-            // lblNombreSistema
+            // lblDescripcionLateral
             // 
-            lblNombreSistema.AutoSize = true;
-            lblNombreSistema.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            lblNombreSistema.ForeColor = Color.White;
-            lblNombreSistema.Location = new Point(45, 65);
-            lblNombreSistema.Name = "lblNombreSistema";
-            lblNombreSistema.Size = new Size(219, 32);
-            lblNombreSistema.TabIndex = 0;
-            lblNombreSistema.Text = "Sistema de Gestión";
-
-            // 
-            // lblSubtituloSistema
-            // 
-            lblSubtituloSistema.AutoSize = true;
-            lblSubtituloSistema.Font = new Font("Segoe UI", 10F);
-            lblSubtituloSistema.ForeColor = Color.FromArgb(205, 217, 245);
-            lblSubtituloSistema.Location = new Point(47, 105);
-            lblSubtituloSistema.Name = "lblSubtituloSistema";
-            lblSubtituloSistema.Size = new Size(181, 23);
-            lblSubtituloSistema.TabIndex = 1;
-            lblSubtituloSistema.Text = "Administración de citas";
-
+            lblDescripcionLateral.Font = new Font("Segoe UI", 10F);
+            lblDescripcionLateral.ForeColor = Color.FromArgb(215, 225, 248);
+            lblDescripcionLateral.Location = new Point(47, 505);
+            lblDescripcionLateral.Name = "lblDescripcionLateral";
+            lblDescripcionLateral.Size = new Size(270, 90);
+            lblDescripcionLateral.TabIndex = 3;
+            lblDescripcionLateral.Text = "Gestiona el acceso al sistema y mantén un control seguro de tu equipo de trabajo.";
             // 
             // lblMensajePrincipal
             // 
@@ -108,19 +84,28 @@
             lblMensajePrincipal.Size = new Size(280, 160);
             lblMensajePrincipal.TabIndex = 2;
             lblMensajePrincipal.Text = "Crea y administra usuarios de forma segura";
-
             // 
-            // lblDescripcionLateral
+            // lblSubtituloSistema
             // 
-            lblDescripcionLateral.Font = new Font("Segoe UI", 10F);
-            lblDescripcionLateral.ForeColor = Color.FromArgb(215, 225, 248);
-            lblDescripcionLateral.Location = new Point(47, 505);
-            lblDescripcionLateral.Name = "lblDescripcionLateral";
-            lblDescripcionLateral.Size = new Size(270, 90);
-            lblDescripcionLateral.TabIndex = 3;
-            lblDescripcionLateral.Text =
-                "Gestiona el acceso al sistema y mantén un control seguro de tu equipo de trabajo.";
-
+            lblSubtituloSistema.AutoSize = true;
+            lblSubtituloSistema.Font = new Font("Segoe UI", 10F);
+            lblSubtituloSistema.ForeColor = Color.FromArgb(205, 217, 245);
+            lblSubtituloSistema.Location = new Point(47, 105);
+            lblSubtituloSistema.Name = "lblSubtituloSistema";
+            lblSubtituloSistema.Size = new Size(187, 23);
+            lblSubtituloSistema.TabIndex = 1;
+            lblSubtituloSistema.Text = "Administración de citas";
+            // 
+            // lblNombreSistema
+            // 
+            lblNombreSistema.AutoSize = true;
+            lblNombreSistema.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            lblNombreSistema.ForeColor = Color.White;
+            lblNombreSistema.Location = new Point(45, 65);
+            lblNombreSistema.Name = "lblNombreSistema";
+            lblNombreSistema.Size = new Size(231, 32);
+            lblNombreSistema.TabIndex = 0;
+            lblNombreSistema.Text = "Sistema de Gestión";
             // 
             // pnlFormulario
             // 
@@ -144,7 +129,6 @@
             pnlFormulario.Name = "pnlFormulario";
             pnlFormulario.Size = new Size(510, 610);
             pnlFormulario.TabIndex = 1;
-
             // 
             // lblIconoUsuario
             // 
@@ -157,7 +141,6 @@
             lblIconoUsuario.TabIndex = 0;
             lblIconoUsuario.Text = "♙";
             lblIconoUsuario.TextAlign = ContentAlignment.MiddleCenter;
-
             // 
             // lblTitulo
             // 
@@ -166,10 +149,9 @@
             lblTitulo.ForeColor = Color.FromArgb(20, 20, 25);
             lblTitulo.Location = new Point(140, 48);
             lblTitulo.Name = "lblTitulo";
-            lblTitulo.Size = new Size(225, 46);
+            lblTitulo.Size = new Size(234, 46);
             lblTitulo.TabIndex = 1;
             lblTitulo.Text = "Crear usuario";
-
             // 
             // lblDescripcion
             // 
@@ -178,10 +160,9 @@
             lblDescripcion.ForeColor = Color.Gray;
             lblDescripcion.Location = new Point(142, 94);
             lblDescripcion.Name = "lblDescripcion";
-            lblDescripcion.Size = new Size(286, 21);
+            lblDescripcion.Size = new Size(304, 21);
             lblDescripcion.TabIndex = 2;
             lblDescripcion.Text = "Registra una nueva cuenta para el sistema.";
-
             // 
             // lblNombreCompleto
             // 
@@ -189,10 +170,9 @@
             lblNombreCompleto.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             lblNombreCompleto.Location = new Point(55, 145);
             lblNombreCompleto.Name = "lblNombreCompleto";
-            lblNombreCompleto.Size = new Size(149, 21);
+            lblNombreCompleto.Size = new Size(150, 21);
             lblNombreCompleto.TabIndex = 3;
             lblNombreCompleto.Text = "Nombre completo";
-
             // 
             // txtNombreCompleto
             // 
@@ -202,7 +182,6 @@
             txtNombreCompleto.PlaceholderText = "Ingrese el nombre completo";
             txtNombreCompleto.Size = new Size(400, 30);
             txtNombreCompleto.TabIndex = 0;
-
             // 
             // lblNombreUsuario
             // 
@@ -213,7 +192,6 @@
             lblNombreUsuario.Size = new Size(157, 21);
             lblNombreUsuario.TabIndex = 5;
             lblNombreUsuario.Text = "Nombre de usuario";
-
             // 
             // txtNombreUsuario
             // 
@@ -223,7 +201,6 @@
             txtNombreUsuario.PlaceholderText = "Ingrese el nombre de usuario";
             txtNombreUsuario.Size = new Size(400, 30);
             txtNombreUsuario.TabIndex = 1;
-
             // 
             // lblCorreo
             // 
@@ -234,7 +211,6 @@
             lblCorreo.Size = new Size(61, 21);
             lblCorreo.TabIndex = 7;
             lblCorreo.Text = "Correo";
-
             // 
             // txtCorreo
             // 
@@ -244,7 +220,6 @@
             txtCorreo.PlaceholderText = "Ingrese el correo electrónico";
             txtCorreo.Size = new Size(400, 30);
             txtCorreo.TabIndex = 2;
-
             // 
             // lblPassword
             // 
@@ -252,10 +227,9 @@
             lblPassword.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             lblPassword.Location = new Point(55, 355);
             lblPassword.Name = "lblPassword";
-            lblPassword.Size = new Size(97, 21);
+            lblPassword.Size = new Size(96, 21);
             lblPassword.TabIndex = 9;
             lblPassword.Text = "Contraseña";
-
             // 
             // txtPassword
             // 
@@ -266,7 +240,6 @@
             txtPassword.Size = new Size(400, 30);
             txtPassword.TabIndex = 3;
             txtPassword.UseSystemPasswordChar = true;
-
             // 
             // lblConfirmarPassword
             // 
@@ -274,10 +247,9 @@
             lblConfirmarPassword.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             lblConfirmarPassword.Location = new Point(55, 425);
             lblConfirmarPassword.Name = "lblConfirmarPassword";
-            lblConfirmarPassword.Size = new Size(178, 21);
+            lblConfirmarPassword.Size = new Size(175, 21);
             lblConfirmarPassword.TabIndex = 11;
             lblConfirmarPassword.Text = "Confirmar contraseña";
-
             // 
             // txtConfirmarPassword
             // 
@@ -288,7 +260,6 @@
             txtConfirmarPassword.Size = new Size(400, 30);
             txtConfirmarPassword.TabIndex = 4;
             txtConfirmarPassword.UseSystemPasswordChar = true;
-
             // 
             // btnCrearUsuario
             // 
@@ -304,7 +275,7 @@
             btnCrearUsuario.TabIndex = 5;
             btnCrearUsuario.Text = "Crear usuario";
             btnCrearUsuario.UseVisualStyleBackColor = false;
-
+            btnCrearUsuario.Click += btnCrearUsuario_Click;
             // 
             // btnCancelar
             // 
@@ -320,7 +291,7 @@
             btnCancelar.TabIndex = 6;
             btnCancelar.Text = "Cancelar";
             btnCancelar.UseVisualStyleBackColor = false;
-
+            btnCancelar.Click += btnCancelar_Click;
             // 
             // CrearUsuario
             // 
@@ -335,12 +306,10 @@
             Name = "CrearUsuario";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Sistema de Gestión de Citas";
-
             pnlLateral.ResumeLayout(false);
             pnlLateral.PerformLayout();
             pnlFormulario.ResumeLayout(false);
             pnlFormulario.PerformLayout();
-
             ResumeLayout(false);
         }
 
