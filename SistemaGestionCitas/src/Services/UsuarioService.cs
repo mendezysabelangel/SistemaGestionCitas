@@ -54,7 +54,7 @@ namespace SistemaGestionCitas.src.Services
             return new ResultadoOperacion
             {
                 Exitoso = true,
-                Mensaje = "Usuario creado correctamente. Ya puede iniciar sesión."
+                Mensaje = "Usuario creado correctamente."
             };
         }
 
