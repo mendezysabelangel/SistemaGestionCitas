@@ -12,7 +12,7 @@ namespace SistemaGestionCitas.src.Forms
         private readonly Color textoGris = Color.FromArgb(90, 100, 115);
         private readonly Color azulClaro = Color.FromArgb(190, 205, 240);
 
-       
+
         private readonly AuthService authService = new AuthService();
 
         // Elementos de la pantalla
@@ -114,7 +114,7 @@ namespace SistemaGestionCitas.src.Forms
             btnVerPassword.FlatAppearance.BorderColor = Color.FromArgb(209, 213, 219);
             btnVerPassword.BackColor = Color.White;
             btnVerPassword.Cursor = Cursors.Hand;
-            btnVerPassword.TabStop = false;   
+            btnVerPassword.TabStop = false;
             btnVerPassword.Click += BtnVerPassword_Click;
             pnlTarjeta.Controls.Add(btnVerPassword);
 
@@ -233,9 +233,18 @@ namespace SistemaGestionCitas.src.Forms
 
             //txtPassword.Clear();
 
-            FrmDashboard dashboard = new FrmDashboard();
-            dashboard.Show();
             this.Hide();
+
+            using (FrmDashboard dashboard = new FrmDashboard())
+            {
+                dashboard.ShowDialog();
+            }
+
+            this.Show();
+
+            txtUsuario.Clear();
+            txtPassword.Clear();
+            txtUsuario.Focus();
         }
 
         // Botón Salir
@@ -250,6 +259,11 @@ namespace SistemaGestionCitas.src.Forms
             CrearUsuario crearUsuario = new CrearUsuario();
             crearUsuario.Show();
             this.Hide();
+        }
+
+        private void FormLogin_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }
