@@ -49,15 +49,20 @@ namespace SistemaGestionCitas.src.Forms
         {
             this.Hide();
 
-            FormLogin ventanaCrearCuenta = new FormLogin();
-            ventanaCrearCuenta.ShowDialog();
+            FormLogin ventanaInicio = new FormLogin();
+            ventanaInicio.ShowDialog();
 
             this.Show();
         }
 
         private void btnCrearUsuario_Click(object sender, EventArgs e)
         {
+            this.Hide();
 
+            FrmDashboard ventanaDashboard = new FrmDashboard();
+            ventanaDashboard.ShowDialog();
+
+            this.Show();
         }
     }
 }
