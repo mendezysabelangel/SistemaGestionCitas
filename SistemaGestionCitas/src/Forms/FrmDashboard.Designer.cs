@@ -98,7 +98,7 @@
             btnCerrarSesion.FlatStyle = FlatStyle.Flat;
             btnCerrarSesion.Font = new Font("Segoe UI", 10F);
             btnCerrarSesion.ForeColor = Color.FromArgb(90, 100, 115);
-            btnCerrarSesion.Location = new Point(13, 487);
+            btnCerrarSesion.Location = new Point(13, 380);
             btnCerrarSesion.Margin = new Padding(3, 2, 3, 2);
             btnCerrarSesion.Name = "btnCerrarSesion";
             btnCerrarSesion.Size = new Size(192, 34);

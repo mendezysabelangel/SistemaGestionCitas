@@ -57,10 +57,10 @@ namespace SistemaGestionCitas.src.Forms
             pnlIzquierdo.Width = 480;
             pnlIzquierdo.BackColor = azul;
 
-            pnlIzquierdo.Controls.Add(CrearLabel("Sistema de Gestión", 40, 40, 400, 20, 10F, FontStyle.Bold, azulClaro));
-            pnlIzquierdo.Controls.Add(CrearLabel("Administración de citas", 40, 55, 360, 60, 10F, FontStyle.Regular, azulClaro));
+            pnlIzquierdo.Controls.Add(CrearLabel("Sistema de Gestión", 40, 40, 400, 26, 10F, FontStyle.Bold, azulClaro));
+            pnlIzquierdo.Controls.Add(CrearLabel("Administración de citas", 40, 65, 360, 60, 10F, FontStyle.Regular, azulClaro));
             pnlIzquierdo.Controls.Add(CrearLabel("Organiza las operaciones diarias desde un solo lugar.", 40, 255, 400, 120, 22F, FontStyle.Bold, Color.White));
-            pnlIzquierdo.Controls.Add(CrearLabel("Administra citas, clientes, empleados y servicios con una estructura clara y segura.", 40, 375, 360, 60, 10F, FontStyle.Regular, azulClaro));
+            pnlIzquierdo.Controls.Add(CrearLabel("Administra citas, clientes, empleados y servicios con una estructura clara y segura.", 40, 375, 380, 60, 10F, FontStyle.Regular, azulClaro));
 
             Controls.Add(pnlIzquierdo);
         }
@@ -83,8 +83,8 @@ namespace SistemaGestionCitas.src.Forms
             lblIcono.TextAlign = ContentAlignment.MiddleCenter;
 
             pnlTarjeta.Controls.Add(lblIcono);
-            pnlTarjeta.Controls.Add(CrearLabel("Iniciar sesión", 20, 80, 390, 36, 18F, FontStyle.Bold, textoOscuro));
-            pnlTarjeta.Controls.Add(CrearLabel("Accede para administrar las operaciones del sistema.", 20, 118, 390, 22, 9F, FontStyle.Regular, textoGris));
+            pnlTarjeta.Controls.Add(CrearLabel("Iniciar sesión", 20, 80, 390, 45, 18F, FontStyle.Bold, textoOscuro));
+            pnlTarjeta.Controls.Add(CrearLabel("Accede para administrar las operaciones del sistema.", 20, 123, 390, 22, 8F, FontStyle.Regular, textoGris));
 
             // Usuario
             pnlTarjeta.Controls.Add(CrearLabel("Usuario", 20, 160, 390, 22, 9.5F, FontStyle.Bold, textoOscuro));
@@ -212,12 +212,6 @@ namespace SistemaGestionCitas.src.Forms
                 else txtPassword.Focus();
                 return;
             }
-
-            //MessageBox.Show(
-            //    resultado.Mensaje + "\nRol: " + resultado.Usuario!.NombreRol,
-            //    "Acceso concedido", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            //txtPassword.Clear();
 
             this.Hide();
 
