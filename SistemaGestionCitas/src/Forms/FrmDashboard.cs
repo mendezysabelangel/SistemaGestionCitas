@@ -198,18 +198,24 @@ namespace SistemaGestionCitas.src.Forms
         }
 
         // Abre un formulario como ventana hija MDI dentro de este dashboard
-        private void AbrirHijo(Form hijo, string seccion)
+        // Antes: private void AbrirHijo(Form hijo, string seccion)
+        public void AbrirHijo(Form hijo, string seccion, bool permitirDuplicados = false)
         {
             // Si ya hay una ventana de ese tipo abierta, solo se trae al frente
-            foreach (Form abierto in MdiChildren)
+            if (!permitirDuplicados)
             {
-                if (abierto.GetType() == hijo.GetType())
+                foreach (Form abierto in MdiChildren)
                 {
-                    abierto.Activate();
-                    hijo.Dispose();
-                    return;
+                    if (abierto.GetType() == hijo.GetType())
+                    {
+                        abierto.Activate();
+                        hijo.Dispose();
+                        return;
+                    }
                 }
             }
+
+            
 
             // El panel de resumen (Dock = Fill) taparía a las ventanas hijas: se oculta
             pnlContenido.Visible = false;

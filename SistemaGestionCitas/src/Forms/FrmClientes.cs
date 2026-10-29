@@ -124,6 +124,7 @@ namespace SistemaGestionCitas.src.Forms
             grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Registrar", 220, 150, 110, azul, Color.White, BtnRegistrar_Click));
             grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Modificar", 340, 150, 110, azul, Color.White, BtnModificar_Click));
             grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Eliminar", 460, 150, 110, rojo, Color.White, BtnEliminar_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Generar reporte", 590, 150, 150, Color.White, azul, BtnReporte_Click));
 
             // ---------- Tabla (centro) ----------
             ConfigurarTabla();
@@ -418,6 +419,27 @@ namespace SistemaGestionCitas.src.Forms
 
             int id = idSeleccionado.Value;
             EjecutarOperacion(() => clienteService.Eliminar(id), "Eliminar cliente");
+        }
+
+        // GENERAR REPORTE (permiso: Consultar)
+        private void BtnReporte_Click(object? sender, EventArgs e)
+        {
+            if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar información"))
+                return;
+
+            // 1. Se abre la ventana de filtros (modal: hay que cerrarla para seguir)
+            using FrmFiltroReporteClientes ventanaFiltros = new FrmFiltroReporteClientes();
+
+            if (ventanaFiltros.ShowDialog(this) != DialogResult.OK)
+                return;   // el usuario canceló
+
+            // 2. Se abre el reporte como ventana hija MDI con los filtros elegidos
+            FrmReporteClientes reporte = new FrmReporteClientes(ventanaFiltros.Filtro);
+
+            if (MdiParent is FrmDashboard dashboard)
+                dashboard.AbrirHijo(reporte, "Reporte de clientes", true);
+            else
+                reporte.Show();
         }
 
         // Enter en un filtro = consultar
