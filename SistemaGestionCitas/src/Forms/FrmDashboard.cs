@@ -10,6 +10,13 @@ namespace SistemaGestionCitas.src.Forms
             InitializeComponent();
             CargarSesion();
 
+            IsMdiContainer = true;                     // esta ventana ahora es contenedor MDI
+            WindowState = FormWindowState.Maximized;   // necesita espacio para las ventanas hijas
+
+            // Conectamos por código los botones del menú lateral
+            btnClientes.Click += btnClientes_Click;
+            btnInicio.Click += btnInicio_Click;
+
             FormClosed += FrmDashboard_FormClosed;
         }
 
@@ -166,6 +173,71 @@ namespace SistemaGestionCitas.src.Forms
                 new FrmCrearRol();
 
             formulario.ShowDialog(this);
+        }
+
+        // Menú lateral: Clientes
+        private void btnClientes_Click(object? sender, EventArgs e)
+        {
+            if (!SesionActual.VerificarPermiso(
+                PermisosSistema.Consultar, "consultar información"))
+            {
+                return;
+            }
+
+            AbrirHijo(new FrmClientes(), "Clientes");
+        }
+
+        // Menú lateral: Inicio (cierra las ventanas hijas y vuelve al resumen)
+        private void btnInicio_Click(object? sender, EventArgs e)
+        {
+            foreach (Form hijo in MdiChildren)
+                hijo.Close();
+
+            pnlContenido.Visible = true;
+            lblSeccion.Text = "Inicio";
+        }
+
+        // Abre un formulario como ventana hija MDI dentro de este dashboard
+        private void AbrirHijo(Form hijo, string seccion)
+        {
+            // Si ya hay una ventana de ese tipo abierta, solo se trae al frente
+            foreach (Form abierto in MdiChildren)
+            {
+                if (abierto.GetType() == hijo.GetType())
+                {
+                    abierto.Activate();
+                    hijo.Dispose();
+                    return;
+                }
+            }
+
+            // El panel de resumen (Dock = Fill) taparía a las ventanas hijas: se oculta
+            pnlContenido.Visible = false;
+            PerformLayout();
+            lblSeccion.Text = seccion;
+
+            // Cuando se cierre la última ventana hija, se vuelve a mostrar el resumen
+            hijo.FormClosed += (s, e) =>
+            {
+                if (!MdiChildren.Any(f => f != hijo && !f.IsDisposed))
+                {
+                    pnlContenido.Visible = true;
+                    lblSeccion.Text = "Inicio";
+                }
+            };
+
+            // Se hace hija del dashboard y se ajusta al área disponible
+            hijo.MdiParent = this;
+
+            MdiClient? area = Controls.OfType<MdiClient>().FirstOrDefault();
+            if (area != null)
+            {
+                hijo.StartPosition = FormStartPosition.Manual;
+                hijo.Location = Point.Empty;
+                hijo.Size = area.ClientSize;
+            }
+
+            hijo.Show();
         }
 
         private void btnCerrarSesion_Click(
