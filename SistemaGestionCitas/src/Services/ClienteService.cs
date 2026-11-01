@@ -88,8 +88,10 @@ namespace SistemaGestionCitas.src.Services
             if (c.Apellidos == "" || c.Apellidos.Length > 80)
                 return Error("Los apellidos son obligatorios (máximo 80 caracteres).");
 
-            if (!Regex.IsMatch(c.Telefono, @"^[0-9+()\-\s]{7,20}$"))
-                return Error("El teléfono debe tener entre 7 y 20 caracteres (números, +, -, paréntesis).");
+            int digitosTelefono = c.Telefono.Count(caracter => caracter >= '0' && caracter <= '9');
+            if (digitosTelefono < 7 || !Regex.IsMatch(c.Telefono, @"\A[0-9+() \-]{7,20}\z"))
+                return Error("El teléfono debe contener al menos 7 dígitos y no superar 20 caracteres.\n" +
+                             "Solo se permiten números, espacios, +, - y paréntesis.");
 
             if (c.Correo != null && (c.Correo.Length > 100 || !CorreoValido(c.Correo)))
                 return Error("El correo electrónico no es válido.");
