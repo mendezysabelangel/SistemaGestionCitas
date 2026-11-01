@@ -46,6 +46,7 @@
 
             lblConfirmarPassword = new Label();
             txtConfirmarPassword = new TextBox();
+            chkActivo = new CheckBox();
 
             btnCrearUsuario = new Button();
             btnCancelar = new Button();
@@ -99,7 +100,7 @@
             lblMensajePrincipal.ForeColor = Color.White;
             lblMensajePrincipal.Location = new Point(45, 210);
             lblMensajePrincipal.Name = "lblMensajePrincipal";
-            lblMensajePrincipal.Size = new Size(280, 160);
+            lblMensajePrincipal.Size = new Size(280, 240);
             lblMensajePrincipal.TabIndex = 2;
             lblMensajePrincipal.Text = "Crea y administra usuarios de forma segura";
 
@@ -140,6 +141,7 @@
 
             pnlFormulario.Controls.Add(lblConfirmarPassword);
             pnlFormulario.Controls.Add(txtConfirmarPassword);
+            pnlFormulario.Controls.Add(chkActivo);
 
             pnlFormulario.Controls.Add(btnCrearUsuario);
             pnlFormulario.Controls.Add(btnCancelar);
@@ -332,7 +334,7 @@
             btnCrearUsuario.Location = new Point(55, 560);
             btnCrearUsuario.Name = "btnCrearUsuario";
             btnCrearUsuario.Size = new Size(190, 48);
-            btnCrearUsuario.TabIndex = 6;
+            btnCrearUsuario.TabIndex = 7;
             btnCrearUsuario.Text = "Crear usuario";
             btnCrearUsuario.UseVisualStyleBackColor = false;
             btnCrearUsuario.Click += btnCrearUsuario_Click;
@@ -349,7 +351,7 @@
             btnCancelar.Location = new Point(265, 560);
             btnCancelar.Name = "btnCancelar";
             btnCancelar.Size = new Size(190, 48);
-            btnCancelar.TabIndex = 7;
+            btnCancelar.TabIndex = 8;
             btnCancelar.Text = "Cancelar";
             btnCancelar.UseVisualStyleBackColor = false;
             btnCancelar.Click += btnCancelar_Click;
@@ -357,6 +359,13 @@
             // 
             // CrearUsuario
             // 
+            chkActivo.AutoSize = true;
+            chkActivo.Checked = true;
+            chkActivo.Location = new Point(55, 532);
+            chkActivo.Name = "chkActivo";
+            chkActivo.TabIndex = 6;
+            chkActivo.Text = "Usuario activo";
+
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(246, 248, 252);
@@ -408,6 +417,7 @@
 
         private Label lblConfirmarPassword;
         private TextBox txtConfirmarPassword;
+        private CheckBox chkActivo;
 
         private Button btnCrearUsuario;
         private Button btnCancelar;

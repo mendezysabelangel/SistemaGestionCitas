@@ -174,7 +174,8 @@ namespace SistemaGestionCitas.src.Forms
                     nombreUsuario,
                     correo,
                     password,
-                    nombreRol);
+                    nombreRol,
+                    chkActivo.Checked);
             }
             catch (Exception ex)
             {

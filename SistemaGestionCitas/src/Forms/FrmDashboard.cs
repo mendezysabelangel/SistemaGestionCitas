@@ -162,6 +162,11 @@ namespace SistemaGestionCitas.src.Forms
             }
         }
 
+        public void ActualizarDatosSesion()
+        {
+            CargarSesion();
+        }
+
         private void CargarSesion()
         {
             if (SesionActual.UsuarioActual == null)
