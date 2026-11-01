@@ -28,6 +28,7 @@ namespace SistemaGestionCitas.src.Forms
         private readonly TextBox txtApellidos = new TextBox();
         private readonly TextBox txtTelefono = new TextBox();
         private readonly TextBox txtCorreo = new TextBox();
+        private readonly TextBox txtDireccion = new TextBox();
         private readonly TextBox txtDocumento = new TextBox();
         private readonly DateTimePicker dtpFechaNacimiento = new DateTimePicker();
         private readonly CheckBox chkActivo = new CheckBox();
@@ -90,7 +91,7 @@ namespace SistemaGestionCitas.src.Forms
             {
                 Text = "Datos del cliente",
                 Dock = DockStyle.Bottom,
-                Height = 200
+                Height = 220
             };
 
             grpDatos.Controls.Add(CrearLabel("Nombres:", 15, 31, 80));
@@ -114,17 +115,20 @@ namespace SistemaGestionCitas.src.Forms
             dtpFechaNacimiento.Width = 140;
             grpDatos.Controls.Add(dtpFechaNacimiento);
 
+            grpDatos.Controls.Add(CrearLabel("Dirección:", 15, 125, 90));
+            grpDatos.Controls.Add(ConfigurarTexto(txtDireccion, 110, 122, 500, 250));
+
             chkActivo.Text = "Cliente activo";
             chkActivo.Checked = true;
             chkActivo.AutoSize = true;
-            chkActivo.Location = new Point(100, 118);
+            chkActivo.Location = new Point(720, 125);
             grpDatos.Controls.Add(chkActivo);
 
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Nuevo", 100, 150, 110, Color.White, Color.Black, BtnNuevo_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Registrar", 220, 150, 110, azul, Color.White, BtnRegistrar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Modificar", 340, 150, 110, azul, Color.White, BtnModificar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Eliminar", 460, 150, 110, rojo, Color.White, BtnEliminar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Generar reporte", 590, 150, 150, Color.White, azul, BtnReporte_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Nuevo", 100, 167, 110, Color.White, Color.Black, BtnNuevo_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Registrar", 220, 167, 110, azul, Color.White, BtnRegistrar_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Modificar", 340, 167, 110, azul, Color.White, BtnModificar_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Eliminar", 460, 167, 110, rojo, Color.White, BtnEliminar_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Generar reporte", 590, 167, 150, Color.White, azul, BtnReporte_Click));
 
             // ---------- Tabla (centro) ----------
             ConfigurarTabla();
@@ -158,6 +162,7 @@ namespace SistemaGestionCitas.src.Forms
             AgregarColumna("Apellidos", "Apellidos", 90);
             AgregarColumna("Telefono", "Teléfono", 80);
             AgregarColumna("Correo", "Correo", 120);
+            AgregarColumna("Direccion", "Dirección", 150);
             AgregarColumna("Documento", "Documento", 80);
             AgregarColumna("FechaNacimiento", "Nacimiento", 70, "dd/MM/yyyy");
             AgregarColumna("Estado", "Estado", 60);
@@ -273,6 +278,7 @@ namespace SistemaGestionCitas.src.Forms
             txtApellidos.Text = c.Apellidos;
             txtTelefono.Text = c.Telefono;
             txtCorreo.Text = c.Correo ?? "";
+            txtDireccion.Text = c.Direccion;
             txtDocumento.Text = c.Documento ?? "";
             chkActivo.Checked = c.Activo;
 
@@ -294,6 +300,7 @@ namespace SistemaGestionCitas.src.Forms
             txtApellidos.Clear();
             txtTelefono.Clear();
             txtCorreo.Clear();
+            txtDireccion.Clear();
             txtDocumento.Clear();
             chkActivo.Checked = true;
             dtpFechaNacimiento.Checked = false;
@@ -309,6 +316,7 @@ namespace SistemaGestionCitas.src.Forms
                 Apellidos = txtApellidos.Text,
                 Telefono = txtTelefono.Text,
                 Correo = txtCorreo.Text,
+                Direccion = txtDireccion.Text,
                 Documento = txtDocumento.Text,
                 FechaNacimiento = dtpFechaNacimiento.Checked ? dtpFechaNacimiento.Value.Date : null,
                 Activo = chkActivo.Checked

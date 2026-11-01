@@ -78,6 +78,7 @@ namespace SistemaGestionCitas.src.Services
             c.Nombres = c.Nombres.Trim();
             c.Apellidos = c.Apellidos.Trim();
             c.Telefono = c.Telefono.Trim();
+            c.Direccion = c.Direccion.Trim();
             c.Correo = string.IsNullOrWhiteSpace(c.Correo) ? null : c.Correo.Trim();
             c.Documento = string.IsNullOrWhiteSpace(c.Documento) ? null : c.Documento.Trim();
 
@@ -92,6 +93,9 @@ namespace SistemaGestionCitas.src.Services
 
             if (c.Correo != null && (c.Correo.Length > 100 || !CorreoValido(c.Correo)))
                 return Error("El correo electrónico no es válido.");
+
+            if (c.Direccion == "" || c.Direccion.Length > 250)
+                return Error("La dirección es obligatoria (máximo 250 caracteres).");
 
             if (c.Documento != null && c.Documento.Length > 30)
                 return Error("El documento no puede superar 30 caracteres.");

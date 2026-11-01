@@ -9,7 +9,7 @@ namespace SistemaGestionCitas.src.Data
         private readonly Conexion conexion = new Conexion();
 
         private const string Columnas =
-            "IdCliente, Nombres, Apellidos, Telefono, Correo, Documento, FechaNacimiento, Activo, FechaRegistro";
+            "IdCliente, Nombres, Apellidos, Telefono, Correo, Direccion, Documento, FechaNacimiento, Activo, FechaRegistro";
 
         // CONSULTA DINÁMICA: cada filtro que sea null se ignora.
         public List<Cliente> Buscar(int? idCliente, string? texto, bool? activo,
@@ -74,10 +74,10 @@ namespace SistemaGestionCitas.src.Data
         public int Insertar(Cliente c)
         {
             string sql = @"INSERT INTO Clientes
-                              (Nombres, Apellidos, Telefono, Correo, Documento, FechaNacimiento, Activo)
+                              (Nombres, Apellidos, Telefono, Correo, Direccion, Documento, FechaNacimiento, Activo)
                            OUTPUT INSERTED.IdCliente
                            VALUES
-                              (@nombres, @apellidos, @telefono, @correo, @documento, @fechaNacimiento, @activo)";
+                              (@nombres, @apellidos, @telefono, @correo, @direccion, @documento, @fechaNacimiento, @activo)";
 
             using SqlConnection con = conexion.CrearConexion();
             using SqlCommand cmd = new SqlCommand(sql, con);
@@ -92,7 +92,7 @@ namespace SistemaGestionCitas.src.Data
         {
             string sql = @"UPDATE Clientes
                            SET Nombres = @nombres, Apellidos = @apellidos, Telefono = @telefono,
-                               Correo = @correo, Documento = @documento,
+                               Correo = @correo, Direccion = @direccion, Documento = @documento,
                                FechaNacimiento = @fechaNacimiento, Activo = @activo
                            WHERE IdCliente = @idCliente";
 
@@ -139,6 +139,7 @@ namespace SistemaGestionCitas.src.Data
             cmd.Parameters.AddWithValue("@nombres", c.Nombres);
             cmd.Parameters.AddWithValue("@apellidos", c.Apellidos);
             cmd.Parameters.AddWithValue("@telefono", c.Telefono);
+            cmd.Parameters.Add("@direccion", System.Data.SqlDbType.NVarChar, 250).Value = c.Direccion;
             // Para guardar NULL en la BD se envía DBNull.Value
             cmd.Parameters.AddWithValue("@correo", (object?)c.Correo ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@documento", (object?)c.Documento ?? DBNull.Value);
@@ -156,6 +157,7 @@ namespace SistemaGestionCitas.src.Data
                 Apellidos = (string)r["Apellidos"],
                 Telefono = (string)r["Telefono"],
                 Correo = r["Correo"] == DBNull.Value ? null : (string)r["Correo"],
+                Direccion = r["Direccion"] == DBNull.Value ? "" : (string)r["Direccion"],
                 Documento = r["Documento"] == DBNull.Value ? null : (string)r["Documento"],
                 FechaNacimiento = r["FechaNacimiento"] == DBNull.Value ? null : (DateTime)r["FechaNacimiento"],
                 Activo = (bool)r["Activo"],

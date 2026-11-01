@@ -23,10 +23,10 @@ namespace SistemaGestionCitas.src.Forms
 
         // Columnas del reporte (se usan en pantalla, impresión, Excel y CSV)
         private readonly string[] encabezados =
-            { "ID", "Nombre completo", "Teléfono", "Correo", "Documento", "Estado", "Registro" };
+            { "ID", "Nombre completo", "Teléfono", "Correo", "Dirección", "Documento", "Estado", "Registro" };
 
         // Ancho relativo de cada columna al imprimir
-        private readonly float[] pesos = { 5, 22, 12, 24, 13, 9, 11 };
+        private readonly float[] pesos = { 5, 22, 14, 24, 25, 13, 9, 13 };
 
         // Para la impresión por páginas
         private int filaImpresa;
@@ -168,11 +168,12 @@ namespace SistemaGestionCitas.src.Forms
 
             AgregarColumna("IdCliente", encabezados[0], 5);
             AgregarColumna("NombreCompleto", encabezados[1], 22);
-            AgregarColumna("Telefono", encabezados[2], 12);
+            AgregarColumna("Telefono", encabezados[2], 14);
             AgregarColumna("Correo", encabezados[3], 24);
-            AgregarColumna("Documento", encabezados[4], 13);
-            AgregarColumna("Estado", encabezados[5], 9);
-            AgregarColumna("FechaRegistro", encabezados[6], 11, "dd/MM/yyyy");
+            AgregarColumna("Direccion", encabezados[4], 25);
+            AgregarColumna("Documento", encabezados[5], 13);
+            AgregarColumna("Estado", encabezados[6], 9);
+            AgregarColumna("FechaRegistro", encabezados[7], 13, "dd/MM/yyyy");
         }
 
         private void AgregarColumna(string propiedad, string titulo, int peso, string? formato = null)
@@ -304,6 +305,7 @@ namespace SistemaGestionCitas.src.Forms
                 c.NombreCompleto,
                 c.Telefono,
                 c.Correo ?? "",
+                c.Direccion,
                 c.Documento ?? "",
                 c.Estado,
                 c.FechaRegistro.ToString("dd/MM/yyyy")
@@ -344,8 +346,8 @@ namespace SistemaGestionCitas.src.Forms
             using Brush pincelAzul = new SolidBrush(azul);
             using StringFormat formato = new StringFormat
             {
-                Trimming = StringTrimming.EllipsisCharacter,
-                FormatFlags = StringFormatFlags.NoWrap
+                Trimming = StringTrimming.None,
+                FormatFlags = StringFormatFlags.LineLimit
             };
 
             Rectangle m = e.MarginBounds;   // área imprimible dentro de los márgenes
@@ -360,17 +362,20 @@ namespace SistemaGestionCitas.src.Forms
                 fuenteNormal, Brushes.DimGray, m.Left, y);
             y += fuenteNormal.GetHeight(g) + 12;
 
-            float altoFila = fuenteNormal.GetHeight(g) + 6;
-
             // Fila de títulos de columnas
-            DibujarFila(g, encabezados, fuenteNegrita, Brushes.White, pincelAzul, m, y, altoFila, formato);
-            y += altoFila;
+            float altoEncabezado = CalcularAltoFila(g, encabezados, fuenteNegrita, m, formato);
+            DibujarFila(g, encabezados, fuenteNegrita, Brushes.White, pincelAzul, m, y, altoEncabezado, formato);
+            y += altoEncabezado;
 
             // Filas de datos: se dibujan hasta que se acabe la página o los registros
-            float limite = m.Bottom - altoFila - 10;
-            while (filaImpresa < datosMostrados.Count && y <= limite)
+            float limite = m.Bottom - fuenteNormal.GetHeight(g) - 10;
+            while (filaImpresa < datosMostrados.Count)
             {
-                DibujarFila(g, ValoresFila(datosMostrados[filaImpresa]), fuenteNormal,
+                string[] valores = ValoresFila(datosMostrados[filaImpresa]);
+                float altoFila = CalcularAltoFila(g, valores, fuenteNormal, m, formato);
+                if (y + altoFila > limite) break;
+
+                DibujarFila(g, valores, fuenteNormal,
                     Brushes.Black, null, m, y, altoFila, formato);
                 y += altoFila;
                 filaImpresa++;
@@ -386,6 +391,22 @@ namespace SistemaGestionCitas.src.Forms
 
             // Si queda algo por imprimir, Windows vuelve a llamar a este método para la página siguiente
             e.HasMorePages = hayMasPaginas;
+        }
+
+        // La dirección puede ocupar varias líneas; se imprime completa sin cortar la fila.
+        private float CalcularAltoFila(Graphics g, string[] valores, Font fuente, Rectangle m, StringFormat formato)
+        {
+            float totalPesos = pesos.Sum();
+            float alto = fuente.GetHeight(g);
+
+            for (int i = 0; i < valores.Length; i++)
+            {
+                float ancho = m.Width * pesos[i] / totalPesos - 6;
+                SizeF medida = g.MeasureString(valores[i], fuente, new SizeF(ancho, float.MaxValue), formato);
+                alto = Math.Max(alto, medida.Height);
+            }
+
+            return (float)Math.Ceiling(alto) + 6;
         }
 
         private void DibujarFila(Graphics g, string[] valores, Font fuente, Brush colorTexto, Brush? fondo,
