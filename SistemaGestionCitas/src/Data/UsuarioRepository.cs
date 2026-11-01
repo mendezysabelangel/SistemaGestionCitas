@@ -7,6 +7,37 @@ namespace SistemaGestionCitas.src.Data
     {
         private readonly Conexion conexion = new Conexion();
 
+        public List<Usuario> Listar()
+        {
+            List<Usuario> usuarios = new List<Usuario>();
+            string sql = @"SELECT U.IdUsuario, U.NombreUsuario, U.NombreCompleto,
+                                  U.Correo, U.IdRol, R.Nombre AS NombreRol, U.Activo
+                           FROM Usuarios U
+                           INNER JOIN Roles R ON U.IdRol = R.IdRol
+                           ORDER BY U.IdUsuario";
+
+            using SqlConnection con = conexion.CrearConexion();
+            using SqlCommand cmd = new SqlCommand(sql, con);
+            con.Open();
+
+            using SqlDataReader reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                usuarios.Add(new Usuario
+                {
+                    IdUsuario = (int)reader["IdUsuario"],
+                    NombreUsuario = (string)reader["NombreUsuario"],
+                    NombreCompleto = (string)reader["NombreCompleto"],
+                    Correo = reader["Correo"] == DBNull.Value ? null : (string)reader["Correo"],
+                    IdRol = (int)reader["IdRol"],
+                    NombreRol = (string)reader["NombreRol"],
+                    Activo = (bool)reader["Activo"]
+                });
+            }
+
+            return usuarios;
+        }
+
         public Usuario? ObtenerPorNombreUsuario(string nombreUsuario)
         {
             string sql = @"SELECT U.IdUsuario, U.NombreUsuario, U.PasswordHash, U.NombreCompleto,

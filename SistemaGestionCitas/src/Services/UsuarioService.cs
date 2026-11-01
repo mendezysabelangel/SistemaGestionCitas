@@ -10,6 +10,14 @@ namespace SistemaGestionCitas.src.Services
     {
         private readonly UsuarioRepository repositorio = new UsuarioRepository();
 
+        public List<Usuario> ListarUsuarios()
+        {
+            if (!SesionActual.HaySesion || !SesionActual.TienePermiso(PermisosSistema.CrearUsuarios))
+                throw new UnauthorizedAccessException("Permisos insuficientes para consultar usuarios.");
+
+            return repositorio.Listar();
+        }
+
         public ResultadoOperacion RegistrarUsuario(
             string nombreCompleto,
             string nombreUsuario,
@@ -17,6 +25,9 @@ namespace SistemaGestionCitas.src.Services
             string password,
             string nombreRol)
         {
+            if (!SesionActual.HaySesion || !SesionActual.TienePermiso(PermisosSistema.CrearUsuarios))
+                return Error("Permisos insuficientes para crear usuarios.");
+
             // Limpiar los datos recibidos
             nombreCompleto = nombreCompleto.Trim();
             nombreUsuario = nombreUsuario.Trim();

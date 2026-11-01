@@ -207,6 +207,7 @@ namespace SistemaGestionCitas.src.Forms
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
+            DialogResult = DialogResult.OK;
             Close();
         }
 
