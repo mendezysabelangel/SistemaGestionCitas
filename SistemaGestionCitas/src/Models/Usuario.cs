@@ -10,6 +10,7 @@
         public int IdRol { get; set; }
         public string NombreRol { get; set; } = "";
         public bool Activo { get; set; }
+        public string Estado => Activo ? "Activo" : "Inactivo";
         public int IntentosFallidos { get; set; }
         public DateTime? BloqueadoHasta { get; set; }
     }

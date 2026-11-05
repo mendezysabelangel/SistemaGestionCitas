@@ -51,6 +51,7 @@ CREATE TABLE Clientes (
     Apellidos VARCHAR(80) NOT NULL,
     Telefono VARCHAR(20) NOT NULL,
     Correo VARCHAR(100) NULL,
+    Direccion NVARCHAR(250) NULL,
     Documento VARCHAR(30) NULL,
     FechaNacimiento DATE NULL,
     Activo BIT NOT NULL DEFAULT 1,

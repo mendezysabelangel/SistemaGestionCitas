@@ -174,7 +174,8 @@ namespace SistemaGestionCitas.src.Forms
                     nombreUsuario,
                     correo,
                     password,
-                    nombreRol);
+                    nombreRol,
+                    chkActivo.Checked);
             }
             catch (Exception ex)
             {
@@ -207,6 +208,7 @@ namespace SistemaGestionCitas.src.Forms
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
+            DialogResult = DialogResult.OK;
             Close();
         }
 
