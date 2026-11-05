@@ -27,3 +27,15 @@ La dirección es obligatoria al registrar o modificar un cliente, con un máximo
 de 250 caracteres. Los clientes anteriores sin dirección pueden consultarse;
 al modificarlos se debe completar ese dato. También se muestra en el listado,
 el reporte y sus exportaciones.
+
+## Productos
+
+Para agregar el mantenimiento de productos a una base de datos existente,
+ejecutar en este orden:
+
+1. `scripts/004_CreateProductos.sql` (tablas `CategoriasProducto` y `Productos`)
+2. `seed/007_CategoriasProducto.sql` (categorías iniciales)
+3. `seed/008_Productos.sql` (productos de prueba)
+
+Los scripts pueden ejecutarse nuevamente sin duplicar ni borrar datos.
+El código del producto es único y el precio, mayor que cero.

@@ -17,10 +17,12 @@ namespace SistemaGestionCitas.src.Forms
         private Button? botonMenuActivo;
         private Button? botonModalActivo;
         private string seccionModalActiva = "";
+        private readonly Button btnProductos = new Button();   
 
         public FrmDashboard()
         {
             InitializeComponent();
+            CrearBotonProductos();
             components ??= new System.ComponentModel.Container();
             animacionMenu = new System.Windows.Forms.Timer(components) { Interval = 15 };
             animacionMenu.Tick += AnimacionMenu_Tick;
@@ -45,9 +47,31 @@ namespace SistemaGestionCitas.src.Forms
             };
         }
 
+        // Crea el botón "Productos" copiando el estilo del botón "Clientes"
+        private void CrearBotonProductos()
+        {
+            btnProductos.Name = "btnProductos";
+            btnProductos.Text = "Productos";
+            btnProductos.Size = btnClientes.Size;
+            btnProductos.Location = new Point(btnClientes.Left, 218);   // debajo de "Clientes"
+            btnProductos.Font = btnClientes.Font;
+            btnProductos.ForeColor = btnClientes.ForeColor;
+            btnProductos.FlatStyle = FlatStyle.Flat;
+            btnProductos.FlatAppearance.BorderSize = 0;
+            btnProductos.TextAlign = ContentAlignment.MiddleLeft;
+            btnProductos.Click += btnProductos_Click;
+            pnlSidebar.Controls.Add(btnProductos);
+
+            // Los botones de abajo bajan un lugar para dejarle espacio
+            btnUsuario.Top += 44;
+            btnCrearUsuario.Top += 44;
+            btnCrearRol.Top += 44;
+            btnCerrarSesion.Top += 20;
+        }
+
         private void ConfigurarNavegacion()
         {
-            botonesNavegacion = new[] { btnInicio, btnCitas, btnClientes, btnUsuario, btnCrearUsuario, btnCrearRol };
+            botonesNavegacion = new[] { btnInicio, btnCitas, btnClientes, btnProductos, btnUsuario, btnCrearUsuario, btnCrearRol };
             foreach (Button boton in botonesNavegacion)
             {
                 boton.UseVisualStyleBackColor = false;
@@ -138,6 +162,7 @@ namespace SistemaGestionCitas.src.Forms
             Button boton = seccion switch
             {
                 "Clientes" or "Reporte de clientes" => btnClientes,
+                "Productos" => btnProductos,
                 "Usuarios" => btnUsuario,
                 "Citas" => btnCitas,
                 _ => btnInicio
@@ -190,6 +215,9 @@ namespace SistemaGestionCitas.src.Forms
 
             btnCrearRol.Visible =
                 SesionActual.TienePermiso(PermisosSistema.CrearRoles);
+
+            btnProductos.Visible =
+                SesionActual.TienePermiso(PermisosSistema.Consultar);
 
             // Mostrar visualmente los permisos del rol
             ConfigurarBotonPermiso(
@@ -332,6 +360,18 @@ namespace SistemaGestionCitas.src.Forms
             }
 
             AbrirHijo(new FrmClientes(), "Clientes");
+        }
+
+        // Menú lateral: Productos
+        private void btnProductos_Click(object? sender, EventArgs e)
+        {
+            if (!SesionActual.VerificarPermiso(
+                PermisosSistema.Consultar, "consultar información"))
+            {
+                return;
+            }
+
+            AbrirHijo(new FrmProductos(), "Productos");
         }
 
         // Menú lateral: Inicio (cierra las ventanas hijas y vuelve al resumen)
