@@ -53,7 +53,11 @@ namespace SistemaGestionCitas.src.Forms
             btnProductos.Name = "btnProductos";
             btnProductos.Text = "Productos";
             btnProductos.Size = btnClientes.Size;
-            btnProductos.Location = new Point(btnClientes.Left, 218);   // debajo de "Clientes"
+            int separacion = btnUsuario.Top - btnClientes.Bottom;
+
+            btnProductos.Location = new Point(
+                btnClientes.Left,
+                btnClientes.Bottom + separacion);
             btnProductos.Font = btnClientes.Font;
             btnProductos.ForeColor = btnClientes.ForeColor;
             btnProductos.FlatStyle = FlatStyle.Flat;
@@ -62,11 +66,12 @@ namespace SistemaGestionCitas.src.Forms
             btnProductos.Click += btnProductos_Click;
             pnlSidebar.Controls.Add(btnProductos);
 
-            // Los botones de abajo bajan un lugar para dejarle espacio
-            btnUsuario.Top += 44;
-            btnCrearUsuario.Top += 44;
-            btnCrearRol.Top += 44;
-            btnCerrarSesion.Top += 20;
+            int desplazamiento = btnProductos.Height + separacion;
+
+            btnUsuario.Top += desplazamiento;
+            btnCrearUsuario.Top += desplazamiento;
+            btnCrearRol.Top += desplazamiento;
+            btnCerrarSesion.Top += desplazamiento;
         }
 
         private void ConfigurarNavegacion()
