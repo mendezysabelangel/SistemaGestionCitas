@@ -458,5 +458,10 @@ namespace SistemaGestionCitas.src.Forms
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
                 e.Handled = true;
         }
+
+        private void FrmClientes_Load_1(object sender, EventArgs e)
+        {
+
+        }
     }
 }
