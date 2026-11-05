@@ -23,6 +23,8 @@ namespace SistemaGestionCitas.src.Forms
         {
             InitializeComponent();
             CrearBotonProductos();
+            // Citas todavía no tiene un formulario funcional.
+            btnCitas.Visible = false;
             components ??= new System.ComponentModel.Container();
             animacionMenu = new System.Windows.Forms.Timer(components) { Interval = 15 };
             animacionMenu.Tick += AnimacionMenu_Tick;
@@ -224,101 +226,11 @@ namespace SistemaGestionCitas.src.Forms
             btnProductos.Visible =
                 SesionActual.TienePermiso(PermisosSistema.Consultar);
 
-            // Mostrar visualmente los permisos del rol
-            ConfigurarBotonPermiso(
-                btnConsultar,
-                PermisosSistema.Consultar);
-
-            ConfigurarBotonPermiso(
-                btnAgregar,
-                PermisosSistema.Agregar);
-
-            ConfigurarBotonPermiso(
-                btnModificar,
-                PermisosSistema.Modificar);
-
-            ConfigurarBotonPermiso(
-                btnEliminar,
-                PermisosSistema.Eliminar);
-        }
-
-        private void ConfigurarBotonPermiso(
-            Button boton,
-            string permiso)
-        {
-            bool permitido =
-                SesionActual.TienePermiso(permiso);
-
-            if (permitido)
-            {
-                boton.BackColor =
-                    Color.FromArgb(220, 232, 255);
-
-                boton.ForeColor =
-                    Color.FromArgb(28, 69, 171);
-            }
-            else
-            {
-                boton.BackColor =
-                    Color.FromArgb(235, 237, 240);
-
-                boton.ForeColor =
-                    Color.Gray;
-            }
-        }
-
-        private void EjecutarAccion(
-            string permiso,
-            string accion)
-        {
-            if (!SesionActual.VerificarPermiso(
-                permiso,
-                accion))
-            {
-                return;
-            }
-
-            MessageBox.Show(
-                $"Acceso permitido.\n\nSu rol puede {accion}.",
-                "Permiso concedido",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-        }
-
-        private void btnConsultar_Click(
-            object sender,
-            EventArgs e)
-        {
-            EjecutarAccion(
-                PermisosSistema.Consultar,
-                "consultar información");
-        }
-
-        private void btnAgregar_Click(
-            object sender,
-            EventArgs e)
-        {
-            EjecutarAccion(
-                PermisosSistema.Agregar,
-                "agregar registros");
-        }
-
-        private void btnModificar_Click(
-            object sender,
-            EventArgs e)
-        {
-            EjecutarAccion(
-                PermisosSistema.Modificar,
-                "modificar registros");
-        }
-
-        private void btnEliminar_Click(
-            object sender,
-            EventArgs e)
-        {
-            EjecutarAccion(
-                PermisosSistema.Eliminar,
-                "eliminar registros");
+            // Los accesos rápidos reutilizan la navegación y sus validaciones.
+            bool consultar = SesionActual.TienePermiso(PermisosSistema.Consultar);
+            btnAccesoClientes.Visible = consultar;
+            btnAccesoProductos.Visible = consultar;
+            pnlPermisos.Visible = consultar;
         }
 
         private void btnCrearUsuario_Click(

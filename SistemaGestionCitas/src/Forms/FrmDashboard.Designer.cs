@@ -46,10 +46,8 @@
             lblBienvenida = new Label();
             pnlPermisos = new Panel();
             lblPermisos = new Label();
-            btnConsultar = new Button();
-            btnAgregar = new Button();
-            btnModificar = new Button();
-            btnEliminar = new Button();
+            btnAccesoClientes = new Button();
+            btnAccesoProductos = new Button();
             pnlSidebar.SuspendLayout();
             pnlTopbar.SuspendLayout();
             pnlContenido.SuspendLayout();
@@ -397,10 +395,8 @@
             // 
             pnlPermisos.BackColor = Color.White;
             pnlPermisos.BorderStyle = BorderStyle.FixedSingle;
-            pnlPermisos.Controls.Add(btnEliminar);
-            pnlPermisos.Controls.Add(btnModificar);
-            pnlPermisos.Controls.Add(btnAgregar);
-            pnlPermisos.Controls.Add(btnConsultar);
+            pnlPermisos.Controls.Add(btnAccesoProductos);
+            pnlPermisos.Controls.Add(btnAccesoClientes);
             pnlPermisos.Controls.Add(lblPermisos);
             pnlPermisos.Location = new Point(35, 250);
             pnlPermisos.Name = "pnlPermisos";
@@ -417,71 +413,39 @@
             lblPermisos.Name = "lblPermisos";
             lblPermisos.Size = new Size(180, 19);
             lblPermisos.TabIndex = 0;
-            lblPermisos.Text = "Acciones según tu rol";
+            lblPermisos.Text = "Accesos rápidos";
 
             // 
-            // btnConsultar
-            // 
-            btnConsultar.BackColor = Color.FromArgb(220, 232, 255);
-            btnConsultar.FlatAppearance.BorderSize = 0;
-            btnConsultar.FlatStyle = FlatStyle.Flat;
-            btnConsultar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnConsultar.ForeColor = Color.FromArgb(28, 69, 171);
-            btnConsultar.Location = new Point(18, 50);
-            btnConsultar.Name = "btnConsultar";
-            btnConsultar.Size = new Size(150, 35);
-            btnConsultar.TabIndex = 1;
-            btnConsultar.Text = "Consultar";
-            btnConsultar.UseVisualStyleBackColor = false;
-            btnConsultar.Click += btnConsultar_Click;
+            // btnAccesoClientes
+            //
+            btnAccesoClientes.BackColor = Color.FromArgb(220, 232, 255);
+            btnAccesoClientes.FlatAppearance.BorderSize = 0;
+            btnAccesoClientes.FlatStyle = FlatStyle.Flat;
+            btnAccesoClientes.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnAccesoClientes.ForeColor = Color.FromArgb(28, 69, 171);
+            btnAccesoClientes.Location = new Point(18, 50);
+            btnAccesoClientes.Name = "btnAccesoClientes";
+            btnAccesoClientes.Size = new Size(150, 35);
+            btnAccesoClientes.TabIndex = 1;
+            btnAccesoClientes.Text = "Clientes";
+            btnAccesoClientes.UseVisualStyleBackColor = false;
+            btnAccesoClientes.Click += btnClientes_Click;
 
             // 
-            // btnAgregar
-            // 
-            btnAgregar.BackColor = Color.FromArgb(220, 232, 255);
-            btnAgregar.FlatAppearance.BorderSize = 0;
-            btnAgregar.FlatStyle = FlatStyle.Flat;
-            btnAgregar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnAgregar.ForeColor = Color.FromArgb(28, 69, 171);
-            btnAgregar.Location = new Point(190, 50);
-            btnAgregar.Name = "btnAgregar";
-            btnAgregar.Size = new Size(150, 35);
-            btnAgregar.TabIndex = 2;
-            btnAgregar.Text = "Agregar";
-            btnAgregar.UseVisualStyleBackColor = false;
-            btnAgregar.Click += btnAgregar_Click;
-
-            // 
-            // btnModificar
-            // 
-            btnModificar.BackColor = Color.FromArgb(220, 232, 255);
-            btnModificar.FlatAppearance.BorderSize = 0;
-            btnModificar.FlatStyle = FlatStyle.Flat;
-            btnModificar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnModificar.ForeColor = Color.FromArgb(28, 69, 171);
-            btnModificar.Location = new Point(362, 50);
-            btnModificar.Name = "btnModificar";
-            btnModificar.Size = new Size(150, 35);
-            btnModificar.TabIndex = 3;
-            btnModificar.Text = "Modificar";
-            btnModificar.UseVisualStyleBackColor = false;
-            btnModificar.Click += btnModificar_Click;
-
-            // 
-            // btnEliminar
-            // 
-            btnEliminar.BackColor = Color.FromArgb(220, 232, 255);
-            btnEliminar.FlatAppearance.BorderSize = 0;
-            btnEliminar.FlatStyle = FlatStyle.Flat;
-            btnEliminar.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnEliminar.ForeColor = Color.FromArgb(28, 69, 171);
-            btnEliminar.Location = new Point(534, 50);
-            btnEliminar.Name = "btnEliminar";
-            btnEliminar.Size = new Size(150, 35);
-            btnEliminar.TabIndex = 4;
-            btnEliminar.Text = "Eliminar";
-            btnEliminar.UseVisualStyleBackColor = false;
-            btnEliminar.Click += btnEliminar_Click;
+            // btnAccesoProductos
+            //
+            btnAccesoProductos.BackColor = Color.FromArgb(220, 232, 255);
+            btnAccesoProductos.FlatAppearance.BorderSize = 0;
+            btnAccesoProductos.FlatStyle = FlatStyle.Flat;
+            btnAccesoProductos.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnAccesoProductos.ForeColor = Color.FromArgb(28, 69, 171);
+            btnAccesoProductos.Location = new Point(190, 50);
+            btnAccesoProductos.Name = "btnAccesoProductos";
+            btnAccesoProductos.Size = new Size(150, 35);
+            btnAccesoProductos.TabIndex = 2;
+            btnAccesoProductos.Text = "Productos";
+            btnAccesoProductos.UseVisualStyleBackColor = false;
+            btnAccesoProductos.Click += btnProductos_Click;
 
             // 
             // FrmDashboard
@@ -549,9 +513,7 @@
         private Panel pnlPermisos;
         private Label lblPermisos;
 
-        private Button btnConsultar;
-        private Button btnAgregar;
-        private Button btnModificar;
-        private Button btnEliminar;
+        private Button btnAccesoClientes;
+        private Button btnAccesoProductos;
     }
 }

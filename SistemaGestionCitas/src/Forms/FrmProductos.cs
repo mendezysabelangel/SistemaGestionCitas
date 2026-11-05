@@ -41,10 +41,25 @@ namespace SistemaGestionCitas.src.Forms
         private readonly ComboBox cmbCategoria = new ComboBox();
         private readonly CheckBox chkActivo = new CheckBox();
 
+        // Se conservan las referencias para aplicar los permisos a cada acción.
+        private readonly Button btnConsultar = new Button();
+        private readonly Button btnRegistrar = new Button();
+        private readonly Button btnModificar = new Button();
+        private readonly Button btnEliminar = new Button();
+
         public FrmProductos()
         {
             ConstruirInterfaz();
+            AplicarPermisos();
             Load += FrmProductos_Load;
+        }
+
+        private void AplicarPermisos()
+        {
+            btnConsultar.Visible = SesionActual.TienePermiso(PermisosSistema.Consultar);
+            btnRegistrar.Visible = SesionActual.TienePermiso(PermisosSistema.Agregar);
+            btnModificar.Visible = SesionActual.TienePermiso(PermisosSistema.Modificar);
+            btnEliminar.Visible = SesionActual.TienePermiso(PermisosSistema.Eliminar);
         }
 
         // =====================================================
@@ -96,7 +111,7 @@ namespace SistemaGestionCitas.src.Forms
             cmbBuscarStock.SelectedIndex = 0;
             grpFiltros.Controls.Add(cmbBuscarStock);
 
-            grpFiltros.Controls.Add(ConfigurarBoton(new Button(), "Consultar", 600, 66, 110, azul, Color.White, BtnConsultar_Click));
+            grpFiltros.Controls.Add(ConfigurarBoton(btnConsultar, "Consultar", 600, 66, 110, azul, Color.White, BtnConsultar_Click));
             grpFiltros.Controls.Add(ConfigurarBoton(new Button(), "Limpiar filtros", 720, 66, 130, Color.White, Color.Black, BtnLimpiarFiltros_Click));
 
             lblTotal.Location = new Point(15, 106);
@@ -152,9 +167,9 @@ namespace SistemaGestionCitas.src.Forms
             chkActivo.Location = new Point(470, 77);
             grpDatos.Controls.Add(chkActivo);
 
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Registrar", 85, 130, 120, azul, Color.White, BtnRegistrar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Modificar", 215, 130, 120, azul, Color.White, BtnModificar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Eliminar", 345, 130, 110, rojo, Color.White, BtnEliminar_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(btnRegistrar, "Registrar", 85, 130, 120, azul, Color.White, BtnRegistrar_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(btnModificar, "Modificar", 215, 130, 120, azul, Color.White, BtnModificar_Click));
+            grpDatos.Controls.Add(ConfigurarBoton(btnEliminar, "Eliminar", 345, 130, 110, rojo, Color.White, BtnEliminar_Click));
             grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Limpiar campos", 465, 130, 150, Color.White, Color.Black, BtnLimpiarCampos_Click));
 
             // ---------- Tabla (centro) ----------
@@ -261,6 +276,12 @@ namespace SistemaGestionCitas.src.Forms
         // =====================================================
         private void FrmProductos_Load(object? sender, EventArgs e)
         {
+            if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar productos"))
+            {
+                Close();
+                return;
+            }
+
             CargarCategorias();
             Consultar();
         }
@@ -311,6 +332,10 @@ namespace SistemaGestionCitas.src.Forms
         // =====================================================
         private void Consultar()
         {
+            // También protege las consultas automáticas por filtros y por Enter.
+            if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar productos"))
+                return;
+
             // Filtro por ID
             int? id = null;
             if (!string.IsNullOrWhiteSpace(txtBuscarId.Text))
