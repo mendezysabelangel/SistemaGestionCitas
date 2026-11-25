@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\Imagenes\FondoLogin.png" Link="Imagenes\FondoLogin.png" LogicalName="Citorna.Login.FondoLogin.png" />
+    <EmbeddedResource Include="..\Imagenes\LogoIcono.png" Link="Imagenes\LogoIcono.png" LogicalName="Citorna.Dashboard.LogoIcono.png" />
     <EmbeddedResource Include="..\Imagenes\LogoLargo.png" Link="Imagenes\LogoLargo.png" LogicalName="Citorna.Login.LogoLargo.png" />
   </ItemGroup>
 

@@ -1,663 +1,259 @@
-﻿using System.Globalization;
+﻿using System.Drawing.Drawing2D;
+using System.Globalization;
 using SistemaGestionCitas.src.Models;
 using SistemaGestionCitas.src.Services;
 
 namespace SistemaGestionCitas.src.Forms
 {
-    // Formulario SIN archivo Designer (igual que FrmUsuarios):
-    // todos los controles se crean por código dentro de ConstruirInterfaz().
     public class FrmProductos : Form
     {
-        private readonly ProductoService productoService = new ProductoService();
-
-        // Id del producto seleccionado en la tabla (null = ninguno)
-        private int? idSeleccionado = null;
-
-        // true mientras se llenan o reinician los filtros: evita consultar a la BD varias veces
-        private bool cargando = false;
-
-        private readonly Color azul = Color.FromArgb(27, 68, 170);
-        private readonly Color rojo = Color.FromArgb(185, 28, 28);
-        private readonly Color fondoClaro = Color.FromArgb(247, 248, 252);
-        private readonly Color rojoClaro = Color.FromArgb(254, 226, 226);      // fila de producto agotado
-        private readonly Color amarilloClaro = Color.FromArgb(254, 243, 199);  // fila con stock bajo
-
-        // ----- Controles de los filtros -----
-        private readonly TextBox txtBuscarId = new TextBox();
-        private readonly TextBox txtBuscarTexto = new TextBox();
-        private readonly ComboBox cmbBuscarCategoria = new ComboBox();
-        private readonly ComboBox cmbBuscarEstado = new ComboBox();
-        private readonly ComboBox cmbBuscarStock = new ComboBox();
-        private readonly Label lblTotal = new Label();
-
-        // ----- Tabla -----
-        private readonly DataGridView dgvProductos = new DataGridView();
-
-        // ----- Campos de datos del producto -----
-        private readonly TextBox txtCodigo = new TextBox();
-        private readonly TextBox txtNombre = new TextBox();
-        private readonly TextBox txtPrecio = new TextBox();
-        private readonly TextBox txtStock = new TextBox();
-        private readonly ComboBox cmbCategoria = new ComboBox();
-        private readonly CheckBox chkActivo = new CheckBox();
-
-        // Se conservan las referencias para aplicar los permisos a cada acción.
-        private readonly Button btnConsultar = new Button();
-        private readonly Button btnRegistrar = new Button();
-        private readonly Button btnModificar = new Button();
-        private readonly Button btnEliminar = new Button();
+        private static readonly Color FondoIcono = Color.FromArgb(238, 243, 248);
+        private readonly TextBox buscarId = ControlesRegistro.Texto(9);
+        private readonly ComboBox buscarCategoria = ControlesRegistro.Opciones("Todas");
+        private readonly ComboBox buscarEstado = ControlesRegistro.Opciones("Todos", "Activo", "Inactivo");
+        private readonly ComboBox buscarStock = ControlesRegistro.Opciones("Todos", "Agotado", "Stock bajo", "Disponible");
+        private readonly Font nombreProducto = new("Segoe UI", 11F, FontStyle.Bold);
+        private readonly VistaRegistros<Producto> vista = new("Productos", "Catálogo y control de inventario",
+            "Buscar por nombre o código", "producto", p => p.IdProducto);
+        private List<CategoriaProducto>? categorias;
 
         public FrmProductos()
         {
-            ConstruirInterfaz();
-            AplicarPermisos();
-            Load += FrmProductos_Load;
-        }
-
-        private void AplicarPermisos()
-        {
-            btnConsultar.Visible = SesionActual.TienePermiso(PermisosSistema.Consultar);
-            btnRegistrar.Visible = SesionActual.TienePermiso(PermisosSistema.Agregar);
-            btnModificar.Visible = SesionActual.TienePermiso(PermisosSistema.Modificar);
-            btnEliminar.Visible = SesionActual.TienePermiso(PermisosSistema.Eliminar);
-        }
-
-        // =====================================================
-        //  CONSTRUCCIÓN DE LA INTERFAZ
-        // =====================================================
-        private void ConstruirInterfaz()
-        {
-            Text = "Gestión de Productos";
-            Font = new Font("Segoe UI", 10F);
-            BackColor = fondoClaro;
-            ClientSize = new Size(1000, 640);
-            AutoScaleMode = AutoScaleMode.Font;
-
-            // ---------- Grupo de filtros (arriba) ----------
-            GroupBox grpFiltros = new GroupBox
+            SuspendLayout();
+            Text = "Productos";
+            Name = "FrmProductos";
+            AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            FormBorderStyle = FormBorderStyle.None;
+            ClientSize = new Size(1040, 650);
+            vista.Tabla.ColumnHeadersVisible = false;
+            vista.Tabla.CellBorderStyle = DataGridViewCellBorderStyle.None;
+            vista.Tabla.RowTemplate.Height = 67;
+            vista.Tabla.AgregarColumna("Producto y categoría", 46, 145);
+            vista.Tabla.AgregarColumna("Precio", 21, 82);
+            vista.Tabla.AgregarColumna("Existencias", 13, 42);
+            vista.Tabla.AgregarColumna("Inventario", 20, 82);
+            vista.Tabla.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            vista.Tabla.CellPainting += PintarCatalogo;
+            vista.ValorCelda = (p, indice) => indice switch
             {
-                Text = "Filtros de búsqueda",
-                Dock = DockStyle.Top,
-                Height = 135
+                0 => p.Nombre + "\n" + p.Categoria,
+                1 => Precio(p.Precio),
+                2 => $"{p.Stock:N0} uds.",
+                3 => EstadoInventario(p),
+                _ => null
             };
-
-            // Fila 1: ID, nombre o código, categoría
-            grpFiltros.Controls.Add(CrearLabel("ID:", 15, 31, 30));
-            grpFiltros.Controls.Add(ConfigurarTexto(txtBuscarId, 50, 28, 90, 9));
-
-            grpFiltros.Controls.Add(CrearLabel("Nombre o código:", 160, 31, 120));
-            grpFiltros.Controls.Add(ConfigurarTexto(txtBuscarTexto, 285, 28, 210, 100));
-
-            grpFiltros.Controls.Add(CrearLabel("Categoría:", 515, 31, 80));
-            ConfigurarCombo(cmbBuscarCategoria, 600, 28, 200);
-            grpFiltros.Controls.Add(cmbBuscarCategoria);
-
-            // Fila 2: estado, nivel de stock, botones
-            grpFiltros.Controls.Add(CrearLabel("Estado:", 15, 73, 55));
-            ConfigurarCombo(cmbBuscarEstado, 75, 70, 120);
-            cmbBuscarEstado.Items.AddRange(new object[] { "Todos", "Activo", "Inactivo" });
-            cmbBuscarEstado.SelectedIndex = 0;
-            grpFiltros.Controls.Add(cmbBuscarEstado);
-
-            grpFiltros.Controls.Add(CrearLabel("Stock:", 215, 73, 50));
-            ConfigurarCombo(cmbBuscarStock, 270, 70, 210);
-            cmbBuscarStock.Items.AddRange(new object[]
+            vista.MostrarSeleccion = MostrarFicha;
+            vista.AgregarFiltros(("ID de producto", buscarId), ("Categoría", buscarCategoria),
+                ("Estado", buscarEstado), ("Inventario", buscarStock));
+            vista.Consultar += () => Consultar();
+            vista.Restablecer += () =>
             {
-                "Todos",
-                "Agotado (0)",
-                $"Stock bajo (1 a {ProductoService.LimiteStockBajo})",
-                $"Disponible (más de {ProductoService.LimiteStockBajo})"
-            });
-            cmbBuscarStock.SelectedIndex = 0;
-            grpFiltros.Controls.Add(cmbBuscarStock);
-
-            grpFiltros.Controls.Add(ConfigurarBoton(btnConsultar, "Consultar", 600, 66, 110, azul, Color.White, BtnConsultar_Click));
-            grpFiltros.Controls.Add(ConfigurarBoton(new Button(), "Limpiar filtros", 720, 66, 130, Color.White, Color.Black, BtnLimpiarFiltros_Click));
-
-            lblTotal.Location = new Point(15, 106);
-            lblTotal.AutoSize = true;
-            lblTotal.Text = "Registros encontrados: 0";
-            grpFiltros.Controls.Add(lblTotal);
-
-            grpFiltros.Controls.Add(new Label
-            {
-                Text = "Fila roja = agotado   ·   Fila amarilla = stock bajo",
-                Location = new Point(260, 106),
-                AutoSize = true,
-                ForeColor = Color.DimGray
-            });
-
-            // Los combos consultan solos al cambiar (a menos que "cargando" sea true)
-            cmbBuscarCategoria.SelectedIndexChanged += FiltroCambiado;
-            cmbBuscarEstado.SelectedIndexChanged += FiltroCambiado;
-            cmbBuscarStock.SelectedIndexChanged += FiltroCambiado;
-
-            // Enter dentro de los cuadros de búsqueda = consultar. En ID solo dígitos.
-            txtBuscarId.KeyDown += Filtro_KeyDown;
-            txtBuscarTexto.KeyDown += Filtro_KeyDown;
-            txtBuscarId.KeyPress += SoloDigitos_KeyPress;
-
-            // ---------- Grupo de datos (abajo) ----------
-            GroupBox grpDatos = new GroupBox
-            {
-                Text = "Datos del producto",
-                Dock = DockStyle.Bottom,
-                Height = 190
-            };
-
-            grpDatos.Controls.Add(CrearLabel("Código:", 15, 31, 65));
-            grpDatos.Controls.Add(ConfigurarTexto(txtCodigo, 85, 28, 150, 30));
-            grpDatos.Controls.Add(CrearLabel("Nombre:", 255, 31, 65));
-            grpDatos.Controls.Add(ConfigurarTexto(txtNombre, 325, 28, 270, 100));
-            grpDatos.Controls.Add(CrearLabel("Categoría:", 615, 31, 80));
-            ConfigurarCombo(cmbCategoria, 700, 28, 220);
-            grpDatos.Controls.Add(cmbCategoria);
-
-            grpDatos.Controls.Add(CrearLabel("Precio:", 15, 78, 65));
-            grpDatos.Controls.Add(ConfigurarTexto(txtPrecio, 85, 75, 150, 12));
-            txtPrecio.KeyPress += TxtPrecio_KeyPress;
-
-            grpDatos.Controls.Add(CrearLabel("Stock:", 255, 78, 65));
-            grpDatos.Controls.Add(ConfigurarTexto(txtStock, 325, 75, 120, 7));
-            txtStock.KeyPress += SoloDigitos_KeyPress;
-
-            chkActivo.Text = "Producto activo";
-            chkActivo.Checked = true;
-            chkActivo.AutoSize = true;
-            chkActivo.Location = new Point(470, 77);
-            grpDatos.Controls.Add(chkActivo);
-
-            grpDatos.Controls.Add(ConfigurarBoton(btnRegistrar, "Registrar", 85, 130, 120, azul, Color.White, BtnRegistrar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(btnModificar, "Modificar", 215, 130, 120, azul, Color.White, BtnModificar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(btnEliminar, "Eliminar", 345, 130, 110, rojo, Color.White, BtnEliminar_Click));
-            grpDatos.Controls.Add(ConfigurarBoton(new Button(), "Limpiar campos", 465, 130, 150, Color.White, Color.Black, BtnLimpiarCampos_Click));
-
-            // ---------- Tabla (centro) ----------
-            ConfigurarTabla();
-
-            // La tabla (Fill) se agrega primero y se pone al frente
-            Controls.Add(dgvProductos);
-            Controls.Add(grpDatos);
-            Controls.Add(grpFiltros);
-            dgvProductos.BringToFront();
-        }
-
-        private void ConfigurarTabla()
-        {
-            dgvProductos.Dock = DockStyle.Fill;
-            dgvProductos.ReadOnly = true;
-            dgvProductos.AllowUserToAddRows = false;
-            dgvProductos.AllowUserToDeleteRows = false;
-            dgvProductos.MultiSelect = false;
-            dgvProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvProductos.AutoGenerateColumns = false;     // las columnas las definimos nosotros
-            dgvProductos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvProductos.BackgroundColor = Color.White;
-            dgvProductos.RowHeadersVisible = false;
-            dgvProductos.EnableHeadersVisualStyles = false;
-            dgvProductos.ColumnHeadersDefaultCellStyle.BackColor = azul;
-            dgvProductos.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvProductos.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 244, 252);
-
-            // DataPropertyName = nombre de la propiedad de la clase Producto
-            AgregarColumna(nameof(Producto.IdProducto), "ID", 40);
-            AgregarColumna(nameof(Producto.Codigo), "Código", 70);
-            AgregarColumna(nameof(Producto.Nombre), "Nombre", 180);
-            AgregarColumna(nameof(Producto.Categoria), "Categoría", 110);
-            AgregarColumna(nameof(Producto.Precio), "Precio", 70, "N2", true);
-            AgregarColumna(nameof(Producto.Stock), "Stock", 50, null, true);
-            AgregarColumna(nameof(Producto.Estado), "Estado", 60);
-
-            dgvProductos.SelectionChanged += DgvProductos_SelectionChanged;
-            dgvProductos.DataBindingComplete += (s, e) => ResaltarStock();
-        }
-
-        private void AgregarColumna(string propiedad, string titulo, int peso,
-                                    string? formato = null, bool alinearDerecha = false)
-        {
-            DataGridViewTextBoxColumn col = new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = propiedad,
-                HeaderText = titulo,
-                FillWeight = peso,
-                Name = "col" + propiedad
-            };
-
-            if (formato != null) col.DefaultCellStyle.Format = formato;
-            if (alinearDerecha) col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-
-            dgvProductos.Columns.Add(col);
-        }
-
-        // ----- Métodos auxiliares para crear controles sin repetir código -----
-        private Label CrearLabel(string texto, int x, int y, int ancho)
-        {
-            return new Label
-            {
-                Text = texto,
-                Location = new Point(x, y),
-                Size = new Size(ancho, 24),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-        }
-
-        private TextBox ConfigurarTexto(TextBox caja, int x, int y, int ancho, int maxLength)
-        {
-            caja.Location = new Point(x, y);
-            caja.Width = ancho;
-            caja.MaxLength = maxLength;
-            return caja;
-        }
-
-        private void ConfigurarCombo(ComboBox combo, int x, int y, int ancho)
-        {
-            combo.DropDownStyle = ComboBoxStyle.DropDownList;   // solo se puede elegir, no escribir
-            combo.Location = new Point(x, y);
-            combo.Width = ancho;
-        }
-
-        private Button ConfigurarBoton(Button boton, string texto, int x, int y, int ancho,
-                                       Color fondo, Color letra, EventHandler alHacerClic)
-        {
-            boton.Text = texto;
-            boton.Location = new Point(x, y);
-            boton.Size = new Size(ancho, 34);
-            boton.BackColor = fondo;
-            boton.ForeColor = letra;
-            boton.FlatStyle = FlatStyle.Flat;
-            boton.FlatAppearance.BorderColor = fondo == Color.White ? Color.Silver : fondo;
-            boton.Cursor = Cursors.Hand;
-            boton.Click += alHacerClic;
-            return boton;
-        }
-
-        // =====================================================
-        //  CARGA DE DATOS
-        // =====================================================
-        private void FrmProductos_Load(object? sender, EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar productos"))
-            {
-                Close();
-                return;
-            }
-
-            CargarCategorias();
-            Consultar();
-        }
-
-        // Llena los dos ComboBox de categoría con los datos de la base de datos
-        private void CargarCategorias()
-        {
-            try
-            {
-                List<CategoriaProducto> categorias = productoService.ObtenerCategorias();
-
-                // Cada combo lleva una primera opción que no es una categoría real (Id = 0)
-                List<CategoriaProducto> paraFiltro = new List<CategoriaProducto>
-                {
-                    new CategoriaProducto { IdCategoria = 0, Nombre = "Todas" }
-                };
-                paraFiltro.AddRange(categorias);
-
-                List<CategoriaProducto> paraEditor = new List<CategoriaProducto>
-                {
-                    new CategoriaProducto { IdCategoria = 0, Nombre = "-- Seleccione --" }
-                };
-                paraEditor.AddRange(categorias);
-
-                cargando = true;
-                VincularCombo(cmbBuscarCategoria, paraFiltro);
-                VincularCombo(cmbCategoria, paraEditor);
-                cargando = false;
-            }
-            catch (Exception ex)
-            {
-                cargando = false;
-                MessageBox.Show("No se pudieron cargar las categorías.\n\n" + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        // DisplayMember = lo que se ve; ValueMember = el valor real (el Id) que se lee después
-        private void VincularCombo(ComboBox combo, List<CategoriaProducto> datos)
-        {
-            combo.DisplayMember = nameof(CategoriaProducto.Nombre);
-            combo.ValueMember = nameof(CategoriaProducto.IdCategoria);
-            combo.DataSource = datos;
-        }
-
-        // =====================================================
-        //  CONSULTAR (FILTROS DINÁMICOS)
-        // =====================================================
-        private void Consultar()
-        {
-            // También protege las consultas automáticas por filtros y por Enter.
-            if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar productos"))
-                return;
-
-            // Filtro por ID
-            int? id = null;
-            if (!string.IsNullOrWhiteSpace(txtBuscarId.Text))
-            {
-                if (!int.TryParse(txtBuscarId.Text.Trim(), out int idLeido) || idLeido <= 0)
-                {
-                    MessageBox.Show("El ID debe ser un número entero positivo.",
-                        "Filtro inválido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    txtBuscarId.Focus();
-                    return;
-                }
-                id = idLeido;
-            }
-
-            // Filtro por categoría (0 = "Todas")
-            int? idCategoria = null;
-            if (cmbBuscarCategoria.SelectedValue is int categoriaElegida && categoriaElegida > 0)
-                idCategoria = categoriaElegida;
-
-            // Filtro por estado (0 = Todos, 1 = Activo, 2 = Inactivo)
-            bool? activo = null;
-            if (cmbBuscarEstado.SelectedIndex == 1) activo = true;
-            else if (cmbBuscarEstado.SelectedIndex == 2) activo = false;
-
-            // Filtro por nivel de stock (se traduce a un rango mínimo-máximo)
-            int? stockMinimo = null;
-            int? stockMaximo = null;
-            switch (cmbBuscarStock.SelectedIndex)
-            {
-                case 1:   // agotados
-                    stockMinimo = 0;
-                    stockMaximo = 0;
-                    break;
-                case 2:   // stock bajo
-                    stockMinimo = 1;
-                    stockMaximo = ProductoService.LimiteStockBajo;
-                    break;
-                case 3:   // disponibles
-                    stockMinimo = ProductoService.LimiteStockBajo + 1;
-                    break;
-            }
-
-            FiltroProducto filtro = new FiltroProducto
-            {
-                IdProducto = id,
-                Texto = txtBuscarTexto.Text,
-                IdCategoria = idCategoria,
-                Activo = activo,
-                StockMinimo = stockMinimo,
-                StockMaximo = stockMaximo
-            };
-
-            try
-            {
-                List<Producto> lista = productoService.Buscar(filtro);
-
-                dgvProductos.DataSource = lista;
-                dgvProductos.ClearSelection();
-                LimpiarFormulario();
-                lblTotal.Text = "Registros encontrados: " + lista.Count;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("No se pudo consultar la base de datos.\n\n" + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        // Colorea las filas según el stock: rojo = agotado, amarillo = stock bajo
-        private void ResaltarStock()
-        {
-            foreach (DataGridViewRow fila in dgvProductos.Rows)
-            {
-                if (fila.DataBoundItem is not Producto p) continue;
-
-                if (p.Stock == 0)
-                    fila.DefaultCellStyle.BackColor = rojoClaro;
-                else if (p.Stock <= ProductoService.LimiteStockBajo)
-                    fila.DefaultCellStyle.BackColor = amarilloClaro;
-                else
-                    fila.DefaultCellStyle.BackColor = Color.Empty;   // vuelve al color normal
-            }
-        }
-
-        // Al seleccionar una fila de la tabla, sus datos pasan a los campos de abajo
-        private void DgvProductos_SelectionChanged(object? sender, EventArgs e)
-        {
-            if (dgvProductos.SelectedRows.Count == 0) return;
-            if (dgvProductos.SelectedRows[0].DataBoundItem is not Producto p) return;
-
-            idSeleccionado = p.IdProducto;
-            txtCodigo.Text = p.Codigo;
-            txtNombre.Text = p.Nombre;
-            txtPrecio.Text = p.Precio.ToString("0.00", CultureInfo.CurrentCulture);
-            txtStock.Text = p.Stock.ToString();
-            cmbCategoria.SelectedValue = p.IdCategoria;
-            chkActivo.Checked = p.Activo;
-        }
-
-        // =====================================================
-        //  LIMPIEZA Y LECTURA DEL FORMULARIO
-        // =====================================================
-        private void LimpiarFormulario()
-        {
-            idSeleccionado = null;
-            txtCodigo.Clear();
-            txtNombre.Clear();
-            txtPrecio.Clear();
-            txtStock.Clear();
-            chkActivo.Checked = true;
-
-            if (cmbCategoria.Items.Count > 0)
-                cmbCategoria.SelectedIndex = 0;   // "-- Seleccione --"
-        }
-
-        private void ReiniciarFiltros()
-        {
-            cargando = true;
-            txtBuscarId.Clear();
-            txtBuscarTexto.Clear();
-            if (cmbBuscarCategoria.Items.Count > 0) cmbBuscarCategoria.SelectedIndex = 0;
-            cmbBuscarEstado.SelectedIndex = 0;
-            cmbBuscarStock.SelectedIndex = 0;
-            cargando = false;
-        }
-
-        // Valida campos vacíos y tipos de datos. Si todo está bien, arma el objeto Producto.
-        // Las demás reglas (formato del código, rangos, duplicados) las valida el servicio.
-        private bool TryLeerFormulario(out Producto producto)
-        {
-            producto = new Producto();
-
-            if (string.IsNullOrWhiteSpace(txtCodigo.Text))
-                return Advertir("Ingrese el código del producto.", txtCodigo);
-
-            if (string.IsNullOrWhiteSpace(txtNombre.Text))
-                return Advertir("Ingrese el nombre del producto.", txtNombre);
-
-            if (cmbCategoria.SelectedValue is not int idCategoria || idCategoria <= 0)
-                return Advertir("Seleccione una categoría.", cmbCategoria);
-
-            if (string.IsNullOrWhiteSpace(txtPrecio.Text))
-                return Advertir("Ingrese el precio.", txtPrecio);
-
-            // Tipo de dato: el precio debe ser un número decimal
-            if (!decimal.TryParse(txtPrecio.Text.Trim(), NumberStyles.Number,
-                    CultureInfo.CurrentCulture, out decimal precio))
-                return Advertir("El precio debe ser un número válido (ejemplo: 650.00).", txtPrecio);
-
-            if (string.IsNullOrWhiteSpace(txtStock.Text))
-                return Advertir("Ingrese el stock.", txtStock);
-
-            // Tipo de dato: el stock debe ser un número entero
-            if (!int.TryParse(txtStock.Text.Trim(), NumberStyles.None,
-                    CultureInfo.InvariantCulture, out int stock))
-                return Advertir("El stock debe ser un número entero (0 o más).", txtStock);
-
-            producto = new Producto
-            {
-                IdProducto = idSeleccionado ?? 0,
-                Codigo = txtCodigo.Text,
-                Nombre = txtNombre.Text,
-                Precio = precio,
-                Stock = stock,
-                IdCategoria = idCategoria,
-                Activo = chkActivo.Checked
-            };
-            return true;
-        }
-
-        // Muestra el aviso, pone el cursor en el campo con problema y devuelve false
-        private bool Advertir(string mensaje, Control campo)
-        {
-            MessageBox.Show(mensaje, "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            campo.Focus();
-            return false;
-        }
-
-        // Ejecuta Registrar/Modificar/Eliminar y muestra el resultado (evita repetir código)
-        private void EjecutarOperacion(Func<ResultadoOperacion> operacion, string titulo,
-                                       bool reiniciarFiltros = false)
-        {
-            ResultadoOperacion resultado;
-
-            try
-            {
-                resultado = operacion();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ocurrió un error con la base de datos.\n\n" + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            if (!resultado.Exitoso)
-            {
-                MessageBox.Show(resultado.Mensaje, titulo, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            MessageBox.Show(resultado.Mensaje, titulo, MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            // Al registrar se limpian los filtros para que el producto nuevo aparezca en la tabla
-            if (reiniciarFiltros) ReiniciarFiltros();
-            Consultar();
-        }
-
-        // =====================================================
-        //  EVENTOS DE LOS BOTONES
-        // =====================================================
-        private void BtnConsultar_Click(object? sender, EventArgs e)
-        {
-            Consultar();
-        }
-
-        private void BtnLimpiarFiltros_Click(object? sender, EventArgs e)
-        {
-            ReiniciarFiltros();
-            Consultar();
-        }
-
-        private void BtnLimpiarCampos_Click(object? sender, EventArgs e)
-        {
-            dgvProductos.ClearSelection();
-            LimpiarFormulario();
-            txtCodigo.Focus();
-        }
-
-        // REGISTRAR (permiso: Agregar)
-        private void BtnRegistrar_Click(object? sender, EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(PermisosSistema.Agregar, "registrar productos"))
-                return;
-
-            if (idSeleccionado != null)
-            {
-                MessageBox.Show(
-                    "Hay un producto seleccionado en la tabla.\n\n" +
-                    "Pulse \"Limpiar campos\" para registrar uno distinto o \"Modificar\" para actualizar el seleccionado.",
-                    "Producto seleccionado", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (!TryLeerFormulario(out Producto producto)) return;
-
-            EjecutarOperacion(() => productoService.Registrar(producto), "Registrar producto", true);
-        }
-
-        // MODIFICAR (permiso: Modificar)
-        private void BtnModificar_Click(object? sender, EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(PermisosSistema.Modificar, "modificar registros"))
-                return;
-
-            if (idSeleccionado == null)
-            {
-                MessageBox.Show("Seleccione un producto de la tabla para modificarlo.",
-                    "Modificar producto", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (!TryLeerFormulario(out Producto producto)) return;
-
-            EjecutarOperacion(() => productoService.Modificar(producto), "Modificar producto");
-        }
-
-        // ELIMINAR (permiso: Eliminar)
-        private void BtnEliminar_Click(object? sender, EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(PermisosSistema.Eliminar, "eliminar registros"))
-                return;
-
-            if (idSeleccionado == null)
-            {
-                MessageBox.Show("Seleccione un producto de la tabla para eliminarlo.",
-                    "Eliminar producto", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            DialogResult respuesta = MessageBox.Show(
-                $"¿Está seguro de eliminar el producto {txtCodigo.Text} - {txtNombre.Text}?\n\nEsta acción no se puede deshacer.",
-                "Confirmar eliminación", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-            if (respuesta != DialogResult.Yes) return;
-
-            int id = idSeleccionado.Value;
-            EjecutarOperacion(() => productoService.Eliminar(id), "Eliminar producto");
-        }
-
-        // Los combos de filtro llaman a este método al cambiar su selección
-        private void FiltroCambiado(object? sender, EventArgs e)
-        {
-            if (!cargando) Consultar();
-        }
-
-        // Enter en un cuadro de búsqueda = consultar
-        private void Filtro_KeyDown(object? sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.SuppressKeyPress = true;   // evita el "ding" de Windows
+                buscarId.Clear();
+                vista.Busqueda.Clear();
+                buscarCategoria.SelectedIndex = 0;
+                buscarEstado.SelectedIndex = 0;
+                buscarStock.SelectedIndex = 0;
                 Consultar();
+            };
+            vista.Nuevo += () => AbrirEditor(null);
+            vista.Editar += AbrirEditor;
+            vista.Eliminar += async producto => await vista.EliminarConfirmadoAsync($"{producto.Nombre} ({producto.Codigo})",
+                () => new ProductoService().Eliminar(producto.IdProducto), () => Consultar(sinSeleccion: true));
+            Controls.Add(vista);
+            vista.ActualizarPermisos();
+            Shown += (_, _) =>
+            {
+                vista.Tabla.RowTemplate.Height = LogicalToDeviceUnits(67);
+                Consultar();
+            };
+            ResumeLayout(true);
+        }
+
+        private void Consultar(int? seleccionado = null, bool sinSeleccion = false)
+        {
+            if (!vista.LeerId(buscarId, out int? id)) return;
+            int? idCategoria = buscarCategoria.SelectedValue is int categoria && categoria > 0 ? categoria : null;
+            int nivel = buscarStock.SelectedIndex;
+            var filtro = new FiltroProducto
+            {
+                IdProducto = id, Texto = vista.Busqueda.Text.Trim(), IdCategoria = idCategoria,
+                Activo = ControlesRegistro.Estado(buscarEstado.SelectedIndex),
+                StockMinimo = nivel switch { 0 => null, 1 => 0, 2 => 1, _ => ProductoService.LimiteStockBajo + 1 },
+                StockMaximo = nivel switch { 1 => 0, 2 => ProductoService.LimiteStockBajo, _ => null }
+            };
+            bool conFiltros = id.HasValue || idCategoria.HasValue || filtro.Activo.HasValue || nivel > 0
+                || !string.IsNullOrEmpty(filtro.Texto);
+            bool cargarCategorias = categorias == null;
+            vista.Cargar(() =>
+            {
+                var servicio = new ProductoService();
+                List<CategoriaProducto>? obtenidas = cargarCategorias ? servicio.ObtenerCategorias() : null;
+                return (servicio.Buscar(filtro), obtenidas == null ? null : () => EstablecerCategorias(obtenidas));
+            }, conFiltros, seleccionado, sinSeleccion);
+        }
+
+        private void EstablecerCategorias(List<CategoriaProducto> obtenidas)
+        {
+            categorias = obtenidas;
+            VincularCategorias(buscarCategoria, obtenidas, "Todas");
+        }
+
+        private static void VincularCategorias(ComboBox control, List<CategoriaProducto> valores, string opcion)
+        {
+            control.DisplayMember = nameof(CategoriaProducto.Nombre);
+            control.ValueMember = nameof(CategoriaProducto.IdCategoria);
+            control.DataSource = new List<CategoriaProducto> { new() { Nombre = opcion } }.Concat(valores).ToList();
+        }
+
+        private static string Precio(decimal precio) => $"RD$ {precio.ToString("N2", CultureInfo.CurrentCulture)}";
+
+        private static string NivelStock(int stock) => stock switch
+        {
+            0 => "Agotado",
+            <= ProductoService.LimiteStockBajo => "Stock bajo",
+            _ => "Disponible"
+        };
+
+        private static string EstadoInventario(Producto producto) => producto.Activo ? NivelStock(producto.Stock) : "Inactivo";
+
+        private void MostrarFicha(Producto? producto)
+        {
+            if (producto == null)
+            {
+                vista.PresentarFicha("Selecciona un producto para ver sus detalles");
+                return;
             }
+            vista.PresentarFicha(producto.Nombre,
+                ("Código", producto.Codigo),
+                ("Categoría", ControlesRegistro.Disponible(producto.Categoria)),
+                ("Precio", Precio(producto.Precio)),
+                ("Existencias", $"{producto.Stock:N0} unidades"),
+                ("Nivel de stock", producto.Activo ? NivelStock(producto.Stock) : $"{NivelStock(producto.Stock)} en inventario"),
+                ("Estado administrativo", producto.Estado),
+                ("Fecha de registro", producto.FechaRegistro.ToString("dd/MM/yyyy")));
         }
 
-        // Solo se aceptan dígitos (ID de búsqueda y stock)
-        private void SoloDigitos_KeyPress(object? sender, KeyPressEventArgs e)
+        private void PintarCatalogo(object? sender, DataGridViewCellPaintingEventArgs e)
         {
-            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
-                e.Handled = true;
+            if (e.RowIndex < 0 || vista.Registro(e.RowIndex) is not { } p || e.Graphics is not { } g) return;
+            bool seleccionado = (e.State & DataGridViewElementStates.Selected) != 0;
+            var textoFlags = TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter;
+            Rectangle bordes = e.CellBounds;
+            GraphicsState estadoDibujo = g.Save();
+            g.SetClip(Rectangle.Intersect(bordes, e.ClipBounds));
+            using SolidBrush fondoFila = new(seleccionado ? EstiloAgenda.Seleccion : Color.White);
+            using Pen separador = new(EstiloAgenda.Borde);
+            g.FillRectangle(fondoFila, bordes);
+            int margen = vista.LogicalToDeviceUnits(8);
+            if (e.ColumnIndex == 0)
+            {
+                int lado = vista.LogicalToDeviceUnits(40);
+                var icono = new Rectangle(bordes.X + margen, bordes.Y + (bordes.Height - lado) / 2, lado, lado);
+                using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(icono, vista.LogicalToDeviceUnits(8));
+                using SolidBrush fondo = new(FondoIcono);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.FillPath(fondo, forma);
+                int dibujo = vista.LogicalToDeviceUnits(22);
+                IconosAgenda.Dibujar(g, SimboloAgenda.Productos, EstiloAgenda.Tinta,
+                    new(icono.X + (lado - dibujo) / 2, icono.Y + (lado - dibujo) / 2, dibujo, dibujo));
+                int x = icono.Right + margen;
+                int altoLinea = Math.Max(nombreProducto.Height, vista.Font.Height);
+                int y = bordes.Y + (bordes.Height - 2 * altoLinea) / 2;
+                var superior = new Rectangle(x, y, Math.Max(1, bordes.Right - x - margen), altoLinea);
+                var inferior = new Rectangle(superior.X, superior.Bottom, superior.Width, altoLinea);
+                TextRenderer.DrawText(g, p.Nombre, nombreProducto, superior, EstiloAgenda.Tinta, textoFlags);
+                TextRenderer.DrawText(g, p.Categoria, vista.Font, inferior, EstiloAgenda.Secundario, textoFlags);
+            }
+            else if (e.ColumnIndex == 3)
+            {
+                string estado = EstadoInventario(p);
+                (Color color, Color tinta) = estado switch
+                {
+                    "Agotado" => (Color.FromArgb(252, 229, 232), Color.FromArgb(136, 43, 57)),
+                    "Stock bajo" => (Color.FromArgb(253, 239, 211), Color.FromArgb(111, 68, 17)),
+                    "Disponible" => (Color.FromArgb(221, 242, 234), Color.FromArgb(0, 82, 67)),
+                    _ => (FondoIcono, EstiloAgenda.Secundario)
+                };
+                int alto = vista.LogicalToDeviceUnits(26);
+                int ancho = Math.Max(1, Math.Min(bordes.Width - margen, TextRenderer.MeasureText(estado, vista.Font).Width + margen));
+                var etiqueta = new Rectangle(bordes.X + (bordes.Width - ancho) / 2, bordes.Y + (bordes.Height - alto) / 2, ancho, alto);
+                using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(etiqueta, alto / 2);
+                using SolidBrush fondo = new(color);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.FillPath(fondo, forma);
+                TextRenderer.DrawText(g, estado, vista.Font, etiqueta, tinta, textoFlags | TextFormatFlags.HorizontalCenter);
+            }
+            else
+            {
+                TextRenderer.DrawText(g, e.FormattedValue?.ToString() ?? "", vista.Font, bordes, EstiloAgenda.Tinta,
+                    textoFlags | TextFormatFlags.HorizontalCenter);
+            }
+            g.SmoothingMode = SmoothingMode.None;
+            g.DrawLine(separador, bordes.Left, bordes.Bottom - 1, bordes.Right, bordes.Bottom - 1);
+            if (seleccionado && vista.Tabla.Focused && vista.Tabla.CurrentCellAddress == new Point(e.ColumnIndex, e.RowIndex))
+                ControlPaint.DrawFocusRectangle(g, Rectangle.Inflate(bordes, -2, -2), EstiloAgenda.Tinta, EstiloAgenda.Seleccion);
+            g.Restore(estadoDibujo);
+            e.Handled = true;
         }
 
-        // En el precio: dígitos y un único separador decimal (el de la configuración de Windows)
-        private void TxtPrecio_KeyPress(object? sender, KeyPressEventArgs e)
+        private void AbrirEditor(Producto? producto)
         {
-            if (char.IsControl(e.KeyChar) || char.IsDigit(e.KeyChar)) return;
+            string permiso = producto == null ? PermisosSistema.Agregar : PermisosSistema.Modificar;
+            if (!SesionActual.VerificarPermiso(permiso, producto == null ? "registrar productos" : "modificar productos"))
+                return;
+            if (categorias == null)
+            {
+                MessageBox.Show(this, "Primero deben cargarse las categorías. Pulse Consultar para volver a intentarlo.",
+                    "Categorías de productos", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-            string separador = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
-            if (e.KeyChar.ToString() == separador && !txtPrecio.Text.Contains(separador)) return;
+            using var editor = new EditorRegistro(producto == null ? "Nuevo producto" : "Editar producto", permiso, producto != null);
+            var codigo = ControlesRegistro.Texto(30, producto?.Codigo ?? "");
+            var nombre = ControlesRegistro.Texto(100, producto?.Nombre ?? "");
+            var categoria = ControlesRegistro.Opciones();
+            VincularCategorias(categoria, categorias, "Seleccione una categoría");
+            var precio = ControlesRegistro.Texto(12, producto?.Precio.ToString("0.00", CultureInfo.CurrentCulture) ?? "");
+            var stock = ControlesRegistro.Texto(7, producto?.Stock.ToString(CultureInfo.InvariantCulture) ?? "0");
+            var activo = new CheckBox { Text = "Producto activo", Checked = producto?.Activo ?? true, AutoSize = true };
+            editor.AgregarCampo("Código", codigo);
+            editor.AgregarCampo("Nombre", nombre);
+            editor.AgregarCampo("Categoría", categoria);
+            editor.AgregarCampo("Precio (RD$)", precio);
+            editor.AgregarCampo("Existencias", stock);
+            editor.AgregarCampo("Estado", activo);
+            if (producto != null && categorias.Any(c => c.IdCategoria == producto.IdCategoria))
+            {
+                // La lista enlazada ya tiene su contexto cuando se abre el diálogo.
+                editor.Load += (_, _) => categoria.SelectedValue = producto.IdCategoria;
+            }
 
-            e.Handled = true;   // cualquier otra tecla se descarta
+            editor.PrepararGuardado = () =>
+            {
+                if (string.IsNullOrWhiteSpace(codigo.Text)) return editor.Advertir("Ingrese el código del producto.", codigo);
+                if (string.IsNullOrWhiteSpace(nombre.Text)) return editor.Advertir("Ingrese el nombre del producto.", nombre);
+                if (categoria.SelectedValue is not int idCategoria || idCategoria <= 0)
+                    return editor.Advertir("Seleccione una categoría válida.", categoria);
+                if (!decimal.TryParse(precio.Text.Trim(), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+                    CultureInfo.CurrentCulture, out decimal monto))
+                    return editor.Advertir($"Ingrese un precio válido, por ejemplo {650.50m.ToString("0.00")}.", precio);
+                if (!int.TryParse(stock.Text.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out int existencias))
+                    return editor.Advertir("El stock debe ser un número entero (0 o más).", stock);
+                var datos = new Producto
+                {
+                    IdProducto = producto?.IdProducto ?? 0, Codigo = codigo.Text, Nombre = nombre.Text,
+                    Precio = monto, Stock = existencias, IdCategoria = idCategoria, Activo = activo.Checked
+                };
+                return producto == null ? () => new ProductoService().Registrar(datos) : () => new ProductoService().Modificar(datos);
+            };
+            if (editor.ShowDialog(this) == DialogResult.OK) Consultar(producto?.IdProducto, producto == null);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing) nombreProducto.Dispose();
         }
     }
 }

@@ -232,7 +232,9 @@ namespace SistemaGestionCitas.src.Forms
 
         private void ActualizarBotonPassword()
         {
-            string accion = txtPassword.UseSystemPasswordChar ? "Mostrar contraseña" : "Ocultar contraseña";
+            string accion = txtPassword.UseSystemPasswordChar
+                ? "Contraseña oculta; mostrar contraseña"
+                : "Contraseña visible; ocultar contraseña";
             btnVerPassword.AccessibleName = accion;
             ayuda?.SetToolTip(btnVerPassword, accion);
             btnVerPassword.Invalidate();
@@ -252,7 +254,7 @@ namespace SistemaGestionCitas.src.Forms
             ojo.AddBezier(10, 0, 4, 8, -4, 8, -10, 0);
             lienzo.DrawPath(trazo, ojo);
             lienzo.DrawEllipse(trazo, -2.5F, -2.5F, 5, 5);
-            if (!txtPassword.UseSystemPasswordChar)
+            if (txtPassword.UseSystemPasswordChar)
                 lienzo.DrawLine(trazo, -9, 8, 9, -8);
             lienzo.Restore(estado);
         }

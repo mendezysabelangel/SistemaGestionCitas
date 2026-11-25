@@ -1,186 +1,266 @@
 ﻿using SistemaGestionCitas.src.Models;
 using SistemaGestionCitas.src.Services;
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
 
 namespace SistemaGestionCitas.src.Forms
 {
     public partial class FrmDashboard : Form
     {
-        private readonly Dictionary<Form, string> seccionesHijas = new Dictionary<Form, string>();
-        private readonly Dictionary<Button, (Color Fondo, Color Texto)> coloresInicialesMenu =
-            new Dictionary<Button, (Color Fondo, Color Texto)>();
-        private readonly Stopwatch relojAnimacionMenu = new Stopwatch();
+        private readonly Dictionary<Form, string> seccionesHijas = new();
+        private readonly List<BotonMenu> botones = new();
+        private readonly Stopwatch relojMenu = new();
         private readonly System.Windows.Forms.Timer animacionMenu;
-        private readonly Font fuenteMenuNormal;
-        private readonly Font fuenteMenuActiva;
-        private Button[] botonesNavegacion = Array.Empty<Button>();
-        private Button? botonMenuActivo;
-        private Button? botonModalActivo;
-        private string seccionModalActiva = "";
-        private readonly Button btnProductos = new Button();   
+        private readonly ToolTip ayudas;
+        private readonly Font fuente;
+        private readonly Font fuenteActiva;
+        private readonly AgendaInicio agenda;
+        private readonly PictureBox marca = new();
+        private readonly BotonMenu btnPlegar = new("Contraer menú", SimboloAgenda.Anterior);
+        private readonly BotonMenu btnInicio = new("Inicio", SimboloAgenda.Inicio);
+        private readonly BotonMenu btnClientes = new("Clientes", SimboloAgenda.Clientes);
+        private readonly BotonMenu btnProductos = new("Productos", SimboloAgenda.Productos);
+        private readonly BotonMenu btnUsuario = new("Usuarios", SimboloAgenda.Usuarios);
+        private readonly BotonMenu btnCrearUsuario = new("Crear usuario", SimboloAgenda.UsuarioNuevo);
+        private readonly BotonMenu btnCrearRol = new("Crear rol", SimboloAgenda.Rol);
+        private readonly BotonMenu btnCerrarSesion = new("Cerrar sesión", SimboloAgenda.Salir);
+        private readonly Bitmap logoLargo;
+        private readonly Bitmap logoIcono;
+        private BotonMenu? botonActivo;
+        private BotonMenu? botonModal;
+        private string seccionModal = "";
+        private bool contraido;
+        private bool iniciado;
+        private int anchoInicial;
 
         public FrmDashboard()
         {
             InitializeComponent();
-            CrearBotonProductos();
-            // Citas todavía no tiene un formulario funcional.
-            btnCitas.Visible = false;
+            SuspendLayout();
+            IsMdiContainer = true;
+            WindowState = FormWindowState.Maximized;
+            fuente = new Font("Segoe UI", 11F);
+            fuenteActiva = new Font(fuente, FontStyle.Bold);
+            Font = fuente;
+            logoLargo = CargarMarca("Citorna.Login.LogoLargo.png");
+            logoIcono = CargarMarca("Citorna.Dashboard.LogoIcono.png");
+
             components ??= new System.ComponentModel.Container();
+            ayudas = new ToolTip(components);
             animacionMenu = new System.Windows.Forms.Timer(components) { Interval = 15 };
-            animacionMenu.Tick += AnimacionMenu_Tick;
-            fuenteMenuNormal = new Font(btnInicio.Font, FontStyle.Regular);
-            fuenteMenuActiva = new Font(btnInicio.Font, FontStyle.Bold);
-            ConfigurarNavegacion();
+            animacionMenu.Tick += (_, _) => AnimarMenu();
+            agenda = new AgendaInicio { Dock = DockStyle.Fill };
+            pnlContenido.Controls.Add(agenda);
+            ConstruirMenu();
             CargarSesion();
-
-            IsMdiContainer = true;                     // esta ventana ahora es contenedor MDI
-            WindowState = FormWindowState.Maximized;   // necesita espacio para las ventanas hijas
-
-            // Conectamos por código los botones del menú lateral
-            btnClientes.Click += btnClientes_Click;
-            btnInicio.Click += btnInicio_Click;
-
-            MdiChildActivate += (s, e) => ActualizarNavegacion();
-            FormClosed += FrmDashboard_FormClosed;
-            Disposed += (s, e) =>
+            SeleccionarMenu(btnInicio, false);
+            MdiChildActivate += (_, _) => ActualizarNavegacion();
+            if (AreaMdi is { } area) area.SizeChanged += (_, _) => AjustarHijos();
+            Shown += (_, _) =>
             {
-                fuenteMenuNormal.Dispose();
-                fuenteMenuActiva.Dispose();
+                iniciado = true;
+                agenda.ActualizarPermiso();
             };
-        }
-
-        // Crea el botón "Productos" copiando el estilo del botón "Clientes"
-        private void CrearBotonProductos()
-        {
-            btnProductos.Name = "btnProductos";
-            btnProductos.Text = "Productos";
-            btnProductos.Size = btnClientes.Size;
-            int separacion = btnUsuario.Top - btnClientes.Bottom;
-
-            btnProductos.Location = new Point(
-                btnClientes.Left,
-                btnClientes.Bottom + separacion);
-            btnProductos.Font = btnClientes.Font;
-            btnProductos.ForeColor = btnClientes.ForeColor;
-            btnProductos.FlatStyle = FlatStyle.Flat;
-            btnProductos.FlatAppearance.BorderSize = 0;
-            btnProductos.TextAlign = ContentAlignment.MiddleLeft;
-            btnProductos.Click += btnProductos_Click;
-            pnlSidebar.Controls.Add(btnProductos);
-
-            int desplazamiento = btnProductos.Height + separacion;
-
-            btnUsuario.Top += desplazamiento;
-            btnCrearUsuario.Top += desplazamiento;
-            btnCrearRol.Top += desplazamiento;
-            btnCerrarSesion.Top += desplazamiento;
-        }
-
-        private void ConfigurarNavegacion()
-        {
-            botonesNavegacion = new[] { btnInicio, btnCitas, btnClientes, btnProductos, btnUsuario, btnCrearUsuario, btnCrearRol };
-            foreach (Button boton in botonesNavegacion)
+            FormClosed += (_, _) =>
             {
-                boton.UseVisualStyleBackColor = false;
-                boton.BackColor = pnlSidebar.BackColor;
-                boton.ForeColor = Color.FromArgb(70, 80, 95);
-                boton.Font = fuenteMenuNormal;
-            }
-
-            SeleccionarBotonMenu(btnInicio, false);
+                animacionMenu.Stop();
+                relojMenu.Stop();
+                SesionActual.CerrarSesion();
+            };
+            Disposed += (_, _) =>
+            {
+                logoLargo.Dispose();
+                logoIcono.Dispose();
+                fuenteActiva.Dispose();
+                fuente.Dispose();
+            };
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            ResumeLayout(true);
         }
 
-        private void SeleccionarBotonMenu(Button seleccionado, bool animar = true)
-        {
-            if (botonMenuActivo == seleccionado) return;
+        private MdiClient? AreaMdi => Controls.OfType<MdiClient>().FirstOrDefault();
 
+        private void ConstruirMenu()
+        {
+            var estructura = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4,
+                BackColor = EstiloAgenda.Barra, TabStop = false };
+            estructura.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            estructura.RowStyles.Add(new RowStyle(SizeType.Absolute, 140));
+            estructura.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            estructura.RowStyles.Add(new RowStyle(SizeType.Absolute, 55));
+            estructura.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
+
+            var marcaMenu = new TableLayoutPanel { Dock = DockStyle.Fill, Margin = new Padding(10, 11, 10, 8),
+                ColumnCount = 1, RowCount = 2 };
+            marcaMenu.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            marcaMenu.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+            marcaMenu.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            btnPlegar.Anchor = AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
+            btnPlegar.Width = 38;
+            btnPlegar.SoloIcono = true;
+            btnPlegar.Click += (_, _) => CambiarAnchoMenu();
+            marcaMenu.Controls.Add(btnPlegar, 0, 0);
+            marca.Dock = DockStyle.Fill;
+            marca.Margin = new Padding(12, 2, 12, 5);
+            marca.Image = logoLargo;
+            marca.SizeMode = PictureBoxSizeMode.Zoom;
+            marca.AccessibleName = "Citorna";
+            marcaMenu.Controls.Add(marca, 0, 1);
+            ayudas.SetToolTip(btnPlegar, btnPlegar.AccessibleName);
+            estructura.Controls.Add(marcaMenu, 0, 0);
+
+            var navegacion = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = new Padding(9, 0, 9, 0) };
+            botones.AddRange([btnInicio, btnClientes, btnProductos, btnUsuario, btnCrearUsuario, btnCrearRol, btnCerrarSesion]);
+            for (int i = botones.Count - 2; i >= 0; i--)
+            {
+                BotonMenu boton = botones[i];
+                boton.Height = 48;
+                boton.Dock = DockStyle.Top;
+                boton.TabIndex = i;
+                navegacion.Controls.Add(boton);
+            }
+            btnInicio.Click += (_, _) => VolverAInicio();
+            btnClientes.Click += (_, _) => AbrirConsulta(() => new FrmClientes(), "Clientes");
+            btnProductos.Click += (_, _) => AbrirConsulta(() => new FrmProductos(), "Productos");
+            btnUsuario.Click += (_, _) =>
+            {
+                if (SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "consultar usuarios"))
+                    AbrirHijo(new FrmUsuarios(), "Usuarios");
+            };
+            btnCrearUsuario.Click += (_, _) =>
+            {
+                if (!SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "crear usuarios")) return;
+                using CrearUsuario formulario = new();
+                AbrirDialogo(formulario, btnCrearUsuario);
+            };
+            btnCrearRol.Click += (_, _) =>
+            {
+                if (!SesionActual.VerificarPermiso(PermisosSistema.CrearRoles, "crear nuevos roles")) return;
+                using FrmCrearRol formulario = new();
+                AbrirDialogo(formulario, btnCrearRol);
+            };
+            estructura.Controls.Add(navegacion, 0, 1);
+
+            btnCerrarSesion.Dock = DockStyle.Fill;
+            btnCerrarSesion.Margin = new Padding(9, 1, 9, 4);
+            btnCerrarSesion.Click += (_, _) =>
+            {
+                SesionActual.CerrarSesion();
+                Close();
+            };
+            estructura.Controls.Add(btnCerrarSesion, 0, 2);
+            estructura.Controls.Add(new OndasMenu { Dock = DockStyle.Fill, Margin = Padding.Empty }, 0, 3);
+            pnlSidebar.Controls.Add(estructura);
+        }
+
+        private static Bitmap CargarMarca(string nombre)
+        {
+            using Stream archivo = typeof(FrmDashboard).Assembly.GetManifestResourceStream(nombre)
+                ?? throw new InvalidOperationException($"No se encontró el recurso {nombre}.");
+            using Image imagen = Image.FromStream(archivo);
+            return new Bitmap(imagen);
+        }
+
+        private void CambiarAnchoMenu()
+        {
+            contraido = !contraido;
+            btnPlegar.Simbolo = contraido ? SimboloAgenda.Siguiente : SimboloAgenda.Anterior;
+            btnPlegar.AccessibleName = contraido ? "Expandir menú" : "Contraer menú";
+            ayudas.SetToolTip(btnPlegar, btnPlegar.AccessibleName);
+            btnPlegar.Invalidate();
+            if (contraido) AplicarModoMenu();
+            IniciarAnimacion();
+            if (!animacionMenu.Enabled) AplicarModoMenu();
+        }
+
+        private void AplicarModoMenu()
+        {
+            marca.Image = contraido ? logoIcono : logoLargo;
+            int margen = LogicalToDeviceUnits(contraido ? 1 : 12);
+            marca.Margin = new Padding(margen, LogicalToDeviceUnits(2), margen, LogicalToDeviceUnits(5));
+            foreach (BotonMenu boton in botones)
+            {
+                boton.SoloIcono = contraido;
+                boton.Text = contraido ? "" : boton.Etiqueta;
+                ayudas.SetToolTip(boton, contraido ? boton.Etiqueta : null);
+                boton.Invalidate();
+            }
+        }
+
+        private void SeleccionarMenu(BotonMenu seleccionado, bool animar = true)
+        {
+            if (botonActivo == seleccionado) return;
+            botonActivo = seleccionado;
+            foreach (BotonMenu boton in botones)
+            {
+                boton.Font = boton == seleccionado ? fuenteActiva : fuente;
+                boton.AccessibleDescription = boton == seleccionado ? "Sección actual" : null;
+            }
+            IniciarAnimacion(animar);
+        }
+
+        private void IniciarAnimacion(bool animar = true)
+        {
             animacionMenu.Stop();
-            botonMenuActivo = seleccionado;
-            coloresInicialesMenu.Clear();
-            foreach (Button boton in botonesNavegacion)
+            anchoInicial = pnlSidebar.Width;
+            foreach (BotonMenu boton in botones) boton.IntensidadInicial = boton.Intensidad;
+            if (animar && Visible && SystemInformation.IsMenuAnimationEnabled && SystemInformation.UIEffectsEnabled && !SystemInformation.HighContrast)
             {
-                coloresInicialesMenu[boton] = (boton.BackColor, boton.ForeColor);
-                boton.Font = boton == seleccionado ? fuenteMenuActiva : fuenteMenuNormal;
-            }
-
-            if (animar && Visible)
-            {
-                relojAnimacionMenu.Restart();
+                relojMenu.Restart();
                 animacionMenu.Start();
             }
             else
             {
-                AplicarColoresMenu(1);
+                AplicarPasoMenu(1);
             }
         }
 
-        private void AnimacionMenu_Tick(object? sender, EventArgs e)
+        private void AnimarMenu()
         {
-            double progreso = Math.Min(1, relojAnimacionMenu.Elapsed.TotalMilliseconds / 180);
-            AplicarColoresMenu(progreso * progreso * (3 - 2 * progreso));
-            if (progreso >= 1)
+            double tiempo = Math.Min(1, relojMenu.Elapsed.TotalMilliseconds / 180);
+            AplicarPasoMenu(tiempo * tiempo * (3 - 2 * tiempo));
+            if (tiempo < 1) return;
+            animacionMenu.Stop();
+            relojMenu.Stop();
+            AplicarModoMenu();
+        }
+
+        private void AplicarPasoMenu(double progreso)
+        {
+            int destino = LogicalToDeviceUnits(contraido ? 72 : 236);
+            int ancho = (int)Math.Round(anchoInicial + (destino - anchoInicial) * progreso);
+            if (pnlSidebar.Width != ancho) pnlSidebar.Width = ancho;
+            foreach (BotonMenu boton in botones)
             {
-                animacionMenu.Stop();
-                relojAnimacionMenu.Stop();
+                double valor = boton.IntensidadInicial + ((boton == botonActivo ? 1 : 0) - boton.IntensidadInicial) * progreso;
+                if (Math.Abs(boton.Intensidad - valor) < .001) continue;
+                boton.Intensidad = valor;
+                boton.Invalidate();
             }
         }
 
-        private void AplicarColoresMenu(double progreso)
+        public void ActualizarDatosSesion() => CargarSesion();
+
+        private void CargarSesion()
         {
-            foreach (Button boton in botonesNavegacion)
-            {
-                bool activo = boton == botonMenuActivo;
-                Color fondoFinal = activo ? Color.FromArgb(220, 232, 255) : pnlSidebar.BackColor;
-                Color textoFinal = activo ? Color.FromArgb(28, 69, 171) : Color.FromArgb(70, 80, 95);
-                var inicial = coloresInicialesMenu[boton];
-                boton.BackColor = InterpolarColor(inicial.Fondo, fondoFinal, progreso);
-                boton.ForeColor = InterpolarColor(inicial.Texto, textoFinal, progreso);
-                boton.FlatAppearance.MouseOverBackColor = activo ? boton.BackColor : Color.FromArgb(235, 240, 248);
-                boton.FlatAppearance.MouseDownBackColor = boton.FlatAppearance.MouseOverBackColor;
-            }
+            bool consultar = SesionActual.TienePermiso(PermisosSistema.Consultar);
+            bool usuarios = SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
+            btnClientes.Visible = btnProductos.Visible = consultar;
+            btnUsuario.Visible = btnCrearUsuario.Visible = usuarios;
+            btnCrearRol.Visible = SesionActual.TienePermiso(PermisosSistema.CrearRoles);
+            if (iniciado) agenda.ActualizarPermiso();
         }
 
-        private static Color InterpolarColor(Color inicial, Color final, double progreso)
+        private void AbrirConsulta(Func<Form> crear, string seccion)
         {
-            return Color.FromArgb(
-                (int)Math.Round(inicial.R + (final.R - inicial.R) * progreso),
-                (int)Math.Round(inicial.G + (final.G - inicial.G) * progreso),
-                (int)Math.Round(inicial.B + (final.B - inicial.B) * progreso));
+            if (SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar información"))
+                AbrirHijo(crear(), seccion);
         }
 
-        private void ActualizarNavegacion()
+        private void AbrirDialogo(Form formulario, BotonMenu boton)
         {
-            if (IsDisposed || Disposing) return;
-
-            Form? hijoActivo = ActiveMdiChild;
-            if (hijoActivo == null || !seccionesHijas.ContainsKey(hijoActivo) || hijoActivo.IsDisposed)
-                hijoActivo = seccionesHijas.Keys.LastOrDefault(hijo => !hijo.IsDisposed && hijo.Visible);
-
-            pnlContenido.Visible = hijoActivo == null;
-            if (botonModalActivo != null)
-            {
-                lblSeccion.Text = seccionModalActiva;
-                SeleccionarBotonMenu(botonModalActivo);
-                return;
-            }
-
-            string seccion = hijoActivo == null ? "Inicio" : seccionesHijas[hijoActivo];
-            lblSeccion.Text = seccion;
-            Button boton = seccion switch
-            {
-                "Clientes" or "Reporte de clientes" => btnClientes,
-                "Productos" => btnProductos,
-                "Usuarios" => btnUsuario,
-                "Citas" => btnCitas,
-                _ => btnInicio
-            };
-            SeleccionarBotonMenu(boton);
-        }
-
-        private void AbrirDialogo(Form formulario, Button boton, string seccion)
-        {
-            botonModalActivo = boton;
-            seccionModalActiva = seccion;
+            botonModal = boton;
+            seccionModal = boton.Etiqueta;
             ActualizarNavegacion();
             try
             {
@@ -188,209 +268,146 @@ namespace SistemaGestionCitas.src.Forms
             }
             finally
             {
-                botonModalActivo = null;
-                seccionModalActiva = "";
+                botonModal = null;
+                seccionModal = "";
                 ActualizarNavegacion();
             }
         }
 
-        public void ActualizarDatosSesion()
+        private void VolverAInicio()
         {
-            CargarSesion();
-        }
-
-        private void CargarSesion()
-        {
-            if (SesionActual.UsuarioActual == null)
-                return;
-
-            lblBienvenida.Text =
-                $"Bienvenido, {SesionActual.UsuarioActual.NombreCompleto}";
-
-            lblUsuario.Text =
-                SesionActual.UsuarioActual.NombreUsuario;
-
-            lblRol.Text =
-                SesionActual.UsuarioActual.NombreRol;
-
-            // Opciones administrativas
-            btnCrearUsuario.Visible =
-                SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
-
-            btnUsuario.Visible =
-                SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
-
-            btnCrearRol.Visible =
-                SesionActual.TienePermiso(PermisosSistema.CrearRoles);
-
-            btnProductos.Visible =
-                SesionActual.TienePermiso(PermisosSistema.Consultar);
-
-            // Los accesos rápidos reutilizan la navegación y sus validaciones.
-            bool consultar = SesionActual.TienePermiso(PermisosSistema.Consultar);
-            btnAccesoClientes.Visible = consultar;
-            btnAccesoProductos.Visible = consultar;
-            pnlPermisos.Visible = consultar;
-        }
-
-        private void btnCrearUsuario_Click(
-            object sender,
-            EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(
-                PermisosSistema.CrearUsuarios,
-                "crear usuarios"))
-            {
-                return;
-            }
-
-            using CrearUsuario formulario =
-                new CrearUsuario();
-
-            AbrirDialogo(formulario, btnCrearUsuario, "Crear nuevo usuario");
-        }
-
-        private void btnCrearRol_Click(
-            object sender,
-            EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(
-                PermisosSistema.CrearRoles,
-                "crear nuevos roles"))
-            {
-                return;
-            }
-
-            using FrmCrearRol formulario =
-                new FrmCrearRol();
-
-            AbrirDialogo(formulario, btnCrearRol, "Crear nuevo rol");
-        }
-
-        // Menú lateral: Clientes
-        private void btnClientes_Click(object? sender, EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(
-                PermisosSistema.Consultar, "consultar información"))
-            {
-                return;
-            }
-
-            AbrirHijo(new FrmClientes(), "Clientes");
-        }
-
-        // Menú lateral: Productos
-        private void btnProductos_Click(object? sender, EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(
-                PermisosSistema.Consultar, "consultar información"))
-            {
-                return;
-            }
-
-            AbrirHijo(new FrmProductos(), "Productos");
-        }
-
-        // Menú lateral: Inicio (cierra las ventanas hijas y vuelve al resumen)
-        private void btnInicio_Click(object? sender, EventArgs e)
-        {
-            foreach (Form hijo in MdiChildren)
-                hijo.Close();
-
+            foreach (Form hijo in MdiChildren) hijo.Close();
             ActualizarNavegacion();
         }
 
-        // Abre un formulario como ventana hija MDI dentro de este dashboard
-        // Antes: private void AbrirHijo(Form hijo, string seccion)
+        private void ActualizarNavegacion()
+        {
+            if (IsDisposed || Disposing) return;
+            Form? hijo = ActiveMdiChild;
+            if (hijo == null || hijo.IsDisposed || !hijo.Visible || !seccionesHijas.ContainsKey(hijo))
+                hijo = seccionesHijas.Keys.LastOrDefault(formulario => !formulario.IsDisposed && formulario.Visible);
+            pnlContenido.Visible = hijo == null;
+            string seccion = hijo == null ? "Inicio" : seccionesHijas[hijo];
+            Text = $"Citorna — {(botonModal != null ? seccionModal : seccion)}";
+            SeleccionarMenu(botonModal ?? (seccion switch
+            {
+                "Clientes" or "Reporte de clientes" => btnClientes,
+                "Productos" => btnProductos,
+                "Usuarios" => btnUsuario,
+                _ => btnInicio
+            }));
+        }
+
         public void AbrirHijo(Form hijo, string seccion, bool permitirDuplicados = false)
         {
-            // Si ya hay una ventana de ese tipo abierta, solo se trae al frente
             if (!permitirDuplicados)
             {
                 foreach (Form abierto in MdiChildren)
                 {
-                    if (abierto.GetType() == hijo.GetType())
-                    {
-                        abierto.Activate();
-                        hijo.Dispose();
-                        ActualizarNavegacion();
-                        return;
-                    }
+                    if (abierto.GetType() != hijo.GetType()) continue;
+                    if (abierto.WindowState == FormWindowState.Minimized) abierto.WindowState = FormWindowState.Normal;
+                    abierto.Activate();
+                    hijo.Dispose();
+                    ActualizarNavegacion();
+                    return;
                 }
             }
 
-            // El panel de resumen (Dock = Fill) taparía a las ventanas hijas: se oculta
             pnlContenido.Visible = false;
             PerformLayout();
-
             seccionesHijas[hijo] = seccion;
-            hijo.FormClosed += (s, e) =>
+            hijo.FormClosed += (_, _) =>
             {
                 seccionesHijas.Remove(hijo);
                 ActualizarNavegacion();
             };
 
-            // Se hace hija del dashboard y se ajusta al área disponible
             hijo.MdiParent = this;
-
-            MdiClient? area = Controls.OfType<MdiClient>().FirstOrDefault();
-            if (area != null)
-            {
-                hijo.StartPosition = FormStartPosition.Manual;
-                hijo.Location = Point.Empty;
-                hijo.Size = area.ClientSize;
-            }
-
+            hijo.StartPosition = FormStartPosition.Manual;
+            if (AreaMdi is { } area) hijo.Bounds = new Rectangle(Point.Empty, area.ClientSize);
             hijo.Show();
             ActualizarNavegacion();
         }
 
-        private void btnCerrarSesion_Click(
-            object sender,
-            EventArgs e)
+        private void AjustarHijos()
         {
-            SesionActual.CerrarSesion();
-            Close();
-        }
-
-        private void FrmDashboard_FormClosed(
-            object? sender,
-            FormClosedEventArgs e)
-        {
-            animacionMenu.Stop();
-            relojAnimacionMenu.Stop();
-            SesionActual.CerrarSesion();
-        }
-
-        private void btnUsuarios_Click(
-            object sender,
-            EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(
-                PermisosSistema.CrearUsuarios, "consultar usuarios"))
+            if (AreaMdi is not { } area || AreaMdi.ClientSize.Width < 1 || AreaMdi.ClientSize.Height < 1) return;
+            foreach (Form hijo in MdiChildren)
             {
-                return;
+                if (hijo.WindowState == FormWindowState.Normal && !hijo.IsDisposed)
+                    hijo.Bounds = new Rectangle(Point.Empty, area.ClientSize);
+            }
+        }
+
+        private sealed class BotonMenu : Button
+        {
+            public string Etiqueta { get; }
+            public SimboloAgenda Simbolo { get; set; }
+            public bool SoloIcono { get; set; }
+            public double Intensidad { get; set; }
+            public double IntensidadInicial { get; set; }
+
+            public BotonMenu(string texto, SimboloAgenda simbolo)
+            {
+                Etiqueta = texto;
+                Text = texto;
+                AccessibleName = texto;
+                Simbolo = simbolo;
+                Margin = Padding.Empty;
+                FlatStyle = FlatStyle.Flat;
+                FlatAppearance.BorderSize = 0;
+                BackColor = EstiloAgenda.Barra;
+                ForeColor = EstiloAgenda.Tinta;
+                UseVisualStyleBackColor = false;
+                DoubleBuffered = true;
+                ResizeRedraw = true;
+                Cursor = Cursors.Hand;
             }
 
-            AbrirHijo(new FrmUsuarios(), "Usuarios");
-        }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                e.Graphics.Clear(EstiloAgenda.Barra);
+                if (Width < 6 || Height < 6) return;
+                int margen = LogicalToDeviceUnits(3);
+                var rect = new Rectangle(margen, margen, Width - margen * 2, Height - margen * 2);
+                if (rect.Width <= 0 || rect.Height <= 0) return;
+                bool encima = ClientRectangle.Contains(PointToClient(MousePosition));
+                if (Intensidad > 0 || encima || Focused)
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(rect, LogicalToDeviceUnits(9));
+                    using SolidBrush relleno = new(Color.FromArgb(
+                        (int)(EstiloAgenda.Seleccion.R * Intensidad + 239 * (1 - Intensidad)),
+                        (int)(EstiloAgenda.Seleccion.G * Intensidad + 246 * (1 - Intensidad)),
+                        (int)(EstiloAgenda.Seleccion.B * Intensidad + 254 * (1 - Intensidad))));
+                    e.Graphics.FillPath(relleno, forma);
+                    if (Focused)
+                    {
+                        using Pen borde = new(EstiloAgenda.Azul, LogicalToDeviceUnits(2));
+                        e.Graphics.DrawPath(borde, forma);
+                    }
+                }
 
-        private void lblSistema_Click(
-            object sender,
-            EventArgs e)
-        {
-        }
+                int lado = LogicalToDeviceUnits(23);
+                int x = SoloIcono ? (Width - lado) / 2 : LogicalToDeviceUnits(15);
+                IconosAgenda.Dibujar(e.Graphics, Simbolo, EstiloAgenda.Tinta, new(x, (Height - lado) / 2, lado, lado));
+                int izquierda = LogicalToDeviceUnits(54);
+                if (!SoloIcono && Width > izquierda + margen)
+                    TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(izquierda, 0, Width - izquierda - margen, Height),
+                        EstiloAgenda.Tinta, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            }
 
-        private void lblUsuario_Click(
-            object sender,
-            EventArgs e)
-        {
-        }
+            protected override void OnMouseEnter(EventArgs e)
+            {
+                base.OnMouseEnter(e);
+                Invalidate();
+            }
 
-        private void pnlTopbar_Paint(
-            object sender,
-            PaintEventArgs e)
-        {
+            protected override void OnMouseLeave(EventArgs e)
+            {
+                base.OnMouseLeave(e);
+                Invalidate();
+            }
         }
     }
 }
