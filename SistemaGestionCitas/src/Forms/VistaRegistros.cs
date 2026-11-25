@@ -259,17 +259,39 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
 
     private Control ConstruirConsultaPorCampo(string nombre, Control campo)
     {
-        var barra = new FlowLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false };
+        var barra = new TableLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, ColumnCount = 4, RowCount = 1 };
+        barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        barra.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 168));
+        barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        barra.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        barra.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         Label etiqueta = Rotulo(nombre);
-        etiqueta.Margin = new Padding(0, 12, 8, 0);
-        Control entrada = CampoCitorna.Enmarcar(campo, nombre);
-        entrada.Dock = DockStyle.None;
-        entrada.Width = 160;
-        entrada.Margin = new Padding(0, 3, 6, 0);
+        etiqueta.Anchor = AnchorStyles.Left;
+        etiqueta.Margin = new Padding(0, 0, 8, 0);
+
+        var entrada = new TarjetaAgenda { Anchor = AnchorStyles.Left | AnchorStyles.Right, Height = 40, Radio = 9,
+            ResaltarFoco = true, Padding = new Padding(9, 0, 9, 0), Margin = new Padding(0, 0, 8, 0), TabStop = false };
+        var interior = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1,
+            BackColor = Color.Transparent, Margin = Padding.Empty, TabStop = false };
+        interior.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        interior.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        campo.AccessibleName = nombre;
+        campo.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        campo.Margin = Padding.Empty;
+        interior.Controls.Add(campo, 0, 0);
+        entrada.Controls.Add(interior);
+        entrada.Enter += (_, _) => entrada.Invalidate();
+        entrada.Leave += (_, _) => entrada.Invalidate();
         campo.KeyDown += BuscarConEnter;
+
         Button consultar = ControlesRegistro.Boton("Consultar");
+        consultar.Anchor = AnchorStyles.Left;
+        consultar.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        consultar.Margin = Padding.Empty;
         consultar.Click += (_, _) => Consultar?.Invoke();
-        barra.Controls.AddRange([etiqueta, entrada, consultar]);
+        barra.Controls.Add(etiqueta, 0, 0);
+        barra.Controls.Add(entrada, 1, 0);
+        barra.Controls.Add(consultar, 2, 0);
         return barra;
     }
 

@@ -9,7 +9,7 @@ internal sealed class FrmCitas : Form
 {
     private static readonly CultureInfo Espanol = CultureInfo.GetCultureInfo("es-DO");
     private readonly CitaService servicio = new();
-    private readonly DateTimePicker fecha = new() { Format = DateTimePickerFormat.Short };
+    private readonly DateTimePicker fecha = new() { Format = DateTimePickerFormat.Custom, CustomFormat = "dd/MM/yyyy" };
     private readonly ContextMenuStrip estados = new();
     private readonly VistaRegistros<Cita> vista;
     private readonly Action actualizarAgenda;

@@ -35,6 +35,11 @@ internal sealed class FrmNuevaCita : Form
         DateTime inicial = ahora.AddMinutes(15);
         DateTime dia = seleccion.Date > ahora.Date ? seleccion.Date : inicial.Date;
         if (actual != null) dia = actual.Fecha.ToDateTime(TimeOnly.MinValue);
+        else
+        {
+            fecha.MinDate = ahora.Date;
+            fecha.DropDown += (_, _) => fecha.MinDate = DateTime.Today;
+        }
         fecha.Value = dia > fecha.MaxDate ? fecha.MaxDate : dia;
         hora.Value = fecha.Value.Date > inicial.Date ? fecha.Value.Date.AddHours(9) : inicial;
         if (actual != null) hora.Value = fecha.Value.Date.Add(actual.HoraInicio.ToTimeSpan());
@@ -53,19 +58,24 @@ internal sealed class FrmNuevaCita : Form
         campos.Enabled = false;
         guardar.Enabled = false;
         guardar.Text = AccionGuardar;
-        mensaje.Margin = new Padding(0, 12, 0, 0);
+        mensaje.Dock = DockStyle.Bottom;
+        mensaje.Padding = new Padding(24, 0, 24, 12);
         mensaje.LiveSetting = System.Windows.Forms.Automation.AutomationLiveSetting.Assertive;
-        var contenido = DialogoCitorna.Tabla();
-        contenido.Controls.Add(campos);
-        contenido.Controls.Add(mensaje);
+        Controls.Add(mensaje);
         DialogoCitorna.Configurar(this, actual == null ? "Nueva cita" : "Editar cita",
             actual == null ? "Selecciona los datos y el horario de la reserva." : "Actualiza los datos de la reserva.",
-            new Size(510, actual == null ? 490 : 605), contenido, guardar, cancelar);
+            new Size(510, actual == null ? 490 : 605), campos, guardar, cancelar);
+        // El pie se acopla antes del contenido para reservar espacio fuera del área desplazable.
+        mensaje.SendToBack();
+        void AjustarAnchoMensaje() => mensaje.MaximumSize = new Size(Math.Max(1, ClientSize.Width), 0);
+        AjustarAnchoMensaje();
+        ClientSizeChanged += (_, _) => AjustarAnchoMensaje();
 
-        clientes.SelectedIndexChanged += (_, _) => ActualizarResumen();
-        empleados.SelectedIndexChanged += (_, _) => ActualizarResumen();
-        servicios.SelectedIndexChanged += (_, _) => ActualizarResumen();
-        hora.ValueChanged += (_, _) => ActualizarResumen();
+        clientes.SelectedIndexChanged += (_, _) => EntradaCambiada();
+        empleados.SelectedIndexChanged += (_, _) => EntradaCambiada();
+        servicios.SelectedIndexChanged += (_, _) => EntradaCambiada();
+        fecha.ValueChanged += (_, _) => EntradaCambiada();
+        hora.ValueChanged += (_, _) => EntradaCambiada();
         guardar.Click += async (_, _) => await GuardarAsync();
         Shown += async (_, _) => await CargarOpcionesAsync();
         FormClosing += (_, e) => { if (guardando) e.Cancel = true; };
@@ -94,7 +104,7 @@ internal sealed class FrmNuevaCita : Form
             if (servicios.Items.Count == 0) faltantes.Add("servicios");
             campos.Enabled = faltantes.Count == 0;
             MostrarMensaje(campos.Enabled ? "" : $"Faltan registros activos de {string.Join(", ", faltantes)}. Se necesita uno de cada tipo para guardar.");
-            ActualizarResumen();
+            EntradaCambiada();
             if (campos.Enabled) clientes.Focus();
         }
         catch (UnauthorizedAccessException ex)
@@ -106,6 +116,18 @@ internal sealed class FrmNuevaCita : Form
             Trace.TraceWarning("Citorna, opciones de cita: {0}", ex.GetType().Name);
             if (!IsDisposed && Visible) MostrarMensaje("No se pudieron cargar las opciones. Comprueba la conexión y vuelve a abrir el formulario.");
         }
+    }
+
+    private void EntradaCambiada()
+    {
+        ActualizarResumen();
+        if (!campos.Enabled || guardando) return;
+
+        DateOnly dia = DateOnly.FromDateTime(fecha.Value);
+        bool cambiaHorario = actual == null || actual.Fecha != dia || actual.HoraInicio != HoraInicio;
+        MostrarMensaje(cambiaHorario && dia.ToDateTime(HoraInicio) <= DateTime.Now
+            ? "El horario seleccionado ya pasó. Elige una hora de inicio posterior a la actual."
+            : "");
     }
 
     private static void Vincular(ComboBox combo, IEnumerable<Opcion> opciones, Opcion? seleccion)
@@ -160,6 +182,8 @@ internal sealed class FrmNuevaCita : Form
         string? notas = observaciones?.Text;
         var datos = new DatosCita(cliente.Id, empleado.Id, servicio.Id,
             DateOnly.FromDateTime(fecha.Value), HoraInicio, string.IsNullOrWhiteSpace(notas) ? null : notas);
+        var superficie = (ScrollableControl)campos.Parent!;
+        Point desplazamiento = superficie.AutoScrollPosition;
         guardando = true;
         campos.Enabled = guardar.Enabled = cancelar.Enabled = false;
         guardar.Text = "Guardando…";
@@ -182,6 +206,8 @@ internal sealed class FrmNuevaCita : Form
             guardar.Text = AccionGuardar;
             campos.Enabled = cancelar.Enabled = true;
             ActualizarResumen();
+            if (!FechaGuardada.HasValue)
+                superficie.AutoScrollPosition = new Point(-desplazamiento.X, -desplazamiento.Y);
         }
 
         if (FechaGuardada.HasValue) DialogResult = DialogResult.OK;
