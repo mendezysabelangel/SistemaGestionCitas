@@ -74,10 +74,10 @@ internal sealed class EditorRegistro : Form
         ResumeLayout(true);
     }
 
-    internal void AgregarCampo(string nombre, Control control)
+    internal void AgregarCampo(string nombre, Control control, int alto = 38)
     {
         var etiqueta = new Label { Text = nombre, AutoSize = true, Dock = DockStyle.Fill, Margin = Padding.Empty };
-        Control entrada = control is CheckBox ? control : CampoCitorna.Enmarcar(control, nombre);
+        Control entrada = control is CheckBox ? control : CampoCitorna.Enmarcar(control, nombre, alto);
         if (control is CheckBox) control.AccessibleName = nombre;
         entrada.Dock = DockStyle.Top;
         entrada.Margin = new Padding(0, 2, 5, 7);

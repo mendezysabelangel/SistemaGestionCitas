@@ -19,7 +19,9 @@ namespace SistemaGestionCitas.src.Forms
         private readonly BotonMenu btnPlegar = new("Contraer menú", SimboloAgenda.Anterior);
         private readonly BotonMenu btnInicio = new("Inicio", SimboloAgenda.Inicio);
         private readonly BotonMenu btnClientes = new("Clientes", SimboloAgenda.Clientes);
+        private readonly BotonMenu btnServicios = new("Servicios", SimboloAgenda.Servicios);
         private readonly BotonMenu btnProductos = new("Productos", SimboloAgenda.Productos);
+        private readonly BotonMenu btnEmpleados = new("Empleados", SimboloAgenda.Empleados);
         private readonly BotonMenu btnUsuario = new("Usuarios", SimboloAgenda.Usuarios);
         private readonly BotonMenu btnCrearUsuario = new("Crear usuario", SimboloAgenda.UsuarioNuevo);
         private readonly BotonMenu btnCrearRol = new("Crear rol", SimboloAgenda.Rol);
@@ -111,7 +113,8 @@ namespace SistemaGestionCitas.src.Forms
             estructura.Controls.Add(marcaMenu, 0, 0);
 
             var navegacion = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = new Padding(9, 0, 9, 0) };
-            botones.AddRange([btnInicio, btnClientes, btnProductos, btnUsuario, btnCrearUsuario, btnCrearRol, btnCerrarSesion]);
+            botones.AddRange([btnInicio, btnClientes, btnServicios, btnProductos, btnEmpleados,
+                btnUsuario, btnCrearUsuario, btnCrearRol, btnCerrarSesion]);
             for (int i = botones.Count - 2; i >= 0; i--)
             {
                 BotonMenu boton = botones[i];
@@ -122,7 +125,9 @@ namespace SistemaGestionCitas.src.Forms
             }
             btnInicio.Click += (_, _) => VolverAInicio();
             btnClientes.Click += (_, _) => AbrirConsulta<FrmClientes>("Clientes");
+            btnServicios.Click += (_, _) => AbrirConsulta<FrmServicios>("Servicios");
             btnProductos.Click += (_, _) => AbrirConsulta<FrmProductos>("Productos");
+            btnEmpleados.Click += (_, _) => AbrirConsulta<FrmEmpleados>("Empleados");
             btnUsuario.Click += (_, _) =>
             {
                 if (SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "consultar usuarios"))
@@ -250,7 +255,7 @@ namespace SistemaGestionCitas.src.Forms
         {
             bool consultar = SesionActual.TienePermiso(PermisosSistema.Consultar);
             bool usuarios = SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
-            btnClientes.Visible = btnProductos.Visible = consultar;
+            btnClientes.Visible = btnServicios.Visible = btnProductos.Visible = btnEmpleados.Visible = consultar;
             btnUsuario.Visible = btnCrearUsuario.Visible = usuarios;
             btnCrearRol.Visible = SesionActual.TienePermiso(PermisosSistema.CrearRoles);
             if (iniciado) agenda.ActualizarPermiso();
@@ -303,7 +308,9 @@ namespace SistemaGestionCitas.src.Forms
             SeleccionarMenu(botonModal ?? (seccion switch
             {
                 "Clientes" or "Reporte de clientes" => btnClientes,
+                "Servicios" => btnServicios,
                 "Productos" => btnProductos,
+                "Empleados" => btnEmpleados,
                 "Usuarios" => btnUsuario,
                 _ => btnInicio
             }));

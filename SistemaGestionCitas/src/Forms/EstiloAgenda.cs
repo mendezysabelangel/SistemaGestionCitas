@@ -91,7 +91,7 @@ internal sealed class OndasMenu : Control
     }
 }
 
-internal enum SimboloAgenda { Inicio, Clientes, Productos, Usuarios, UsuarioNuevo, Rol, Salir, Anterior, Siguiente, Calendario, Reloj, Confirmada }
+internal enum SimboloAgenda { Inicio, Clientes, Productos, Usuarios, UsuarioNuevo, Rol, Salir, Anterior, Siguiente, Calendario, Reloj, Confirmada, Empleados, Servicios }
 
 internal static class IconosAgenda
 {
@@ -128,6 +128,15 @@ internal static class IconosAgenda
                 dibujo.DrawPolygon(linea, (Point[])[new(12, 2), new(21, 7), new(21, 17), new(12, 22), new(3, 17), new(3, 7)]);
                 dibujo.DrawLines(linea, (Point[])[new(3, 7), new(12, 12), new(21, 7)]);
                 dibujo.DrawLine(linea, 12, 12, 12, 22);
+                break;
+            case SimboloAgenda.Empleados:
+                dibujo.DrawEllipse(linea, 8, 3, 8, 8);
+                dibujo.DrawArc(linea, 4, 13, 16, 16, 180, 180);
+                break;
+            case SimboloAgenda.Servicios:
+                dibujo.DrawPolygon(linea, (Point[])[new(3, 13), new(13, 3), new(21, 3),
+                    new(21, 11), new(11, 21)]);
+                dibujo.DrawEllipse(linea, 15, 6, 3, 3);
                 break;
             case SimboloAgenda.Rol:
                 dibujo.DrawLines(linea, (Point[])[new(12, 2), new(20, 5), new(20, 13), new(17, 18),
