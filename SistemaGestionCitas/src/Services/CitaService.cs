@@ -8,6 +8,7 @@ namespace SistemaGestionCitas.src.Services;
 public sealed class CitaService
 {
     private readonly CitaRepository repositorio = new();
+    private readonly BitacoraCitasRepository bitacora = new();
     private readonly TimeProvider reloj;
 
     public CitaService() : this(TimeProvider.System) { }
@@ -94,6 +95,7 @@ public sealed class CitaService
         if (usuario == null || !SesionActual.TienePermiso(PermisosSistema.Agregar))
             return Task.FromResult(new ResultadoCita(false, "No tiene permiso para registrar citas."));
         int idUsuario = usuario.IdUsuario;
+        string nombreUsuario = usuario.NombreUsuario;
 
         return repositorio.EnTransaccionAsync(async transaccion =>
         {
@@ -106,6 +108,9 @@ public sealed class CitaService
 
             int idCita = await repositorio.InsertarAsync(datos, fin, idEstado, idUsuario, transaccion, cancelacion)
                 .ConfigureAwait(false);
+            if (!await bitacora.RegistrarAsync(idCita, idUsuario, nombreUsuario, "Cita registrada", null, Pendiente,
+                    transaccion, cancelacion).ConfigureAwait(false))
+                return new(false, BitacoraCitasRepository.MensajeInstalacion);
             return new(true, "Cita registrada correctamente.", idCita);
         }, cancelacion);
     }
@@ -148,11 +153,14 @@ public sealed class CitaService
 
     private Task<ResultadoCita> CambiarEstadoAsync(int idCita, string destino, CancellationToken cancelacion)
     {
-        if (!PuedeModificar())
+        Usuario? usuario = SesionActual.UsuarioActual;
+        if (usuario == null || !SesionActual.TienePermiso(PermisosSistema.Modificar))
             return Task.FromResult(new ResultadoCita(false, "No tiene permiso para cambiar el estado de citas."));
         if (idCita <= 0)
             return Task.FromResult(new ResultadoCita(false, "Selecciona una cita válida."));
 
+        int idUsuario = usuario.IdUsuario;
+        string nombreUsuario = usuario.NombreUsuario;
         return repositorio.EnTransaccionAsync(async transaccion =>
         {
             Cita? actual = await repositorio.ConsultarPorIdAsync(idCita, cancelacion, transaccion).ConfigureAwait(false);
@@ -166,6 +174,15 @@ public sealed class CitaService
                 return new(false, $"El estado «{destino}» no está disponible.");
 
             await repositorio.ActualizarEstadoAsync(idCita, idEstado, transaccion, cancelacion).ConfigureAwait(false);
+            string? accion = destino switch
+            {
+                Confirmada => "Cita confirmada",
+                Cancelada => "Cita cancelada",
+                _ => null
+            };
+            if (accion != null && !await bitacora.RegistrarAsync(idCita, idUsuario, nombreUsuario, accion, actual.Estado,
+                    destino, transaccion, cancelacion).ConfigureAwait(false))
+                return new(false, BitacoraCitasRepository.MensajeInstalacion);
             return new(true, $"Estado actualizado a «{destino}».", idCita);
         }, cancelacion);
     }

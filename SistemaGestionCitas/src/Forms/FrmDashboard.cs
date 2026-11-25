@@ -26,6 +26,7 @@ namespace SistemaGestionCitas.src.Forms
         private readonly BotonMenu btnUsuario = new("Usuarios", SimboloAgenda.Usuarios);
         private readonly BotonMenu btnCrearUsuario = new("Crear usuario", SimboloAgenda.UsuarioNuevo);
         private readonly BotonMenu btnCrearRol = new("Crear rol", SimboloAgenda.Rol);
+        private readonly BotonMenu btnBitacora = new("Bitácora", SimboloAgenda.Reloj);
         private readonly BotonMenu btnCerrarSesion = new("Cerrar sesión", SimboloAgenda.Salir);
         private readonly Bitmap logoLargo;
         private readonly Bitmap logoIcono;
@@ -115,7 +116,7 @@ namespace SistemaGestionCitas.src.Forms
 
             var navegacion = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = new Padding(9, 0, 9, 0) };
             botones.AddRange([btnInicio, btnCitas, btnClientes, btnServicios, btnProductos, btnEmpleados,
-                btnUsuario, btnCrearUsuario, btnCrearRol, btnCerrarSesion]);
+                btnUsuario, btnCrearUsuario, btnCrearRol, btnBitacora, btnCerrarSesion]);
             for (int i = botones.Count - 2; i >= 0; i--)
             {
                 BotonMenu boton = botones[i];
@@ -130,6 +131,11 @@ namespace SistemaGestionCitas.src.Forms
             btnServicios.Click += (_, _) => AbrirConsulta<FrmServicios>("Servicios");
             btnProductos.Click += (_, _) => AbrirConsulta<FrmProductos>("Productos");
             btnEmpleados.Click += (_, _) => AbrirConsulta<FrmEmpleados>("Empleados");
+            btnBitacora.Click += (_, _) =>
+            {
+                if (BitacoraCitasService.PuedeConsultar())
+                    AbrirModulo<FrmBitacoraCitas>("Bitácora de Citas");
+            };
             btnUsuario.Click += (_, _) =>
             {
                 if (SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "consultar usuarios"))
@@ -260,6 +266,7 @@ namespace SistemaGestionCitas.src.Forms
             btnCitas.Visible = btnClientes.Visible = btnServicios.Visible = btnProductos.Visible = btnEmpleados.Visible = consultar;
             btnUsuario.Visible = btnCrearUsuario.Visible = usuarios;
             btnCrearRol.Visible = SesionActual.TienePermiso(PermisosSistema.CrearRoles);
+            btnBitacora.Visible = BitacoraCitasService.PuedeConsultar();
             if (iniciado) agenda.ActualizarPermiso();
         }
 
@@ -322,6 +329,7 @@ namespace SistemaGestionCitas.src.Forms
                 "Productos" or "Reporte de inventario" => btnProductos,
                 "Empleados" => btnEmpleados,
                 "Usuarios" => btnUsuario,
+                "Bitácora de Citas" => btnBitacora,
                 _ => btnInicio
             }));
         }
