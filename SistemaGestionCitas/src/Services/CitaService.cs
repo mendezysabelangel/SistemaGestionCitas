@@ -8,6 +8,20 @@ namespace SistemaGestionCitas.src.Services;
 public sealed class CitaService
 {
     private readonly CitaRepository repositorio = new();
+    private readonly TimeProvider reloj;
+
+    public CitaService() : this(TimeProvider.System) { }
+
+    internal CitaService(TimeProvider reloj) => this.reloj = reloj;
+
+    internal (List<Cliente> Clientes, List<Empleado> Empleados, List<Servicio> Servicios) ObtenerOpcionesRegistro()
+    {
+        if (!SesionActual.HaySesion || !SesionActual.TienePermiso(PermisosSistema.Agregar))
+            throw new UnauthorizedAccessException("No tiene permiso para registrar citas.");
+
+        return (new ClienteRepository().Buscar(null, null, true),
+            new EmpleadoRepository().Buscar(null, true), new ServicioRepository().Buscar(null, true));
+    }
 
     public async Task<IReadOnlyList<Cita>> ConsultarPorFechaAsync(DateOnly fecha, CancellationToken cancelacion = default)
     {
@@ -180,6 +194,12 @@ public sealed class CitaService
         TimeOnly horaFin = TimeOnly.FromTimeSpan(fin);
         var (_, hayCruce) = await repositorio.ConsultarDisponibilidadAsync(datos.IdEmpleado, datos.Fecha,
             datos.HoraInicio, horaFin, actual?.IdCita, cancelacion, transaccion).ConfigureAwait(false);
+
+        // Al guardar, esta validación se ejecuta dentro de la transacción, después de adquirir el bloqueo.
+        bool cambiaHorario = actual == null || actual.Fecha != datos.Fecha || actual.HoraInicio != datos.HoraInicio;
+        if (cambiaHorario && datos.Fecha.ToDateTime(datos.HoraInicio) <= reloj.GetLocalNow().DateTime)
+            return new(false, "No se pueden agendar citas en fechas u horarios anteriores al momento actual. El inicio debe ser posterior a la hora actual.");
+
         return hayCruce ? new(false, "El empleado ya tiene una cita que ocupa parte de ese horario.")
             : new(true, "El horario está disponible.", horaFin);
     }

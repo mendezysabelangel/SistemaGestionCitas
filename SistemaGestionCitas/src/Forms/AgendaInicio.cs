@@ -21,6 +21,7 @@ internal sealed class AgendaInicio : UserControl
     private readonly Button anterior;
     private readonly Button siguiente;
     private readonly Button reintentar = new();
+    private readonly Button nuevaCita = ControlesRegistro.Boton("Nueva cita", ControlesRegistro.Primario, Color.White);
     private readonly DataGridView lista = new();
     private readonly TableLayoutPanel pagina = new();
     private readonly TableLayoutPanel zonaAgenda = new();
@@ -59,12 +60,19 @@ internal sealed class AgendaInicio : UserControl
         pagina.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
         pagina.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var cabecera = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
+        var cabecera = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
         cabecera.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        cabecera.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         cabecera.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
         cabecera.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         Cabecera(cabecera, "Inicio", titulo, 0);
         Cabecera(cabecera, "Tu agenda de trabajo", null, 1, EstiloAgenda.Secundario);
+        nuevaCita.Anchor = AnchorStyles.Right;
+        nuevaCita.Margin = new Padding(10, 0, 0, 0);
+        nuevaCita.Visible = false;
+        nuevaCita.Click += (_, _) => AbrirNuevaCita();
+        cabecera.Controls.Add(nuevaCita, 1, 0);
+        cabecera.SetRowSpan(nuevaCita, 2);
         pagina.Controls.Add(cabecera, 0, 0);
         Cabecera(pagina, "Hoy", enfasis, 1);
         pagina.Controls.Add(CrearIndicadores(), 0, 2);
@@ -410,10 +418,26 @@ internal sealed class AgendaInicio : UserControl
 
     public void ActualizarPermiso()
     {
+        nuevaCita.Visible = SesionActual.HaySesion && SesionActual.TienePermiso(PermisosSistema.Agregar);
         bool consultar = PuedeConsultar();
         if (permisoAnterior == consultar) return;
         permisoAnterior = consultar;
         SolicitarDatos();
+    }
+
+    private void AbrirNuevaCita()
+    {
+        if (!SesionActual.HaySesion || !SesionActual.VerificarPermiso(PermisosSistema.Agregar, "registrar citas"))
+            return;
+
+        using var formulario = new FrmNuevaCita(seleccion);
+        if (formulario.ShowDialog(FindForm()) != DialogResult.OK || formulario.FechaRegistrada is not DateTime fecha)
+            return;
+
+        if (seleccion == fecha) SolicitarDatos();
+        else Seleccionar(fecha);
+        MessageBox.Show(FindForm(), "Cita registrada correctamente.", "Nueva cita",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private static bool PuedeConsultar() => SesionActual.HaySesion && SesionActual.TienePermiso(PermisosSistema.Consultar);
