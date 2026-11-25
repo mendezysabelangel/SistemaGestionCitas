@@ -18,6 +18,7 @@ namespace SistemaGestionCitas.src.Forms
         private readonly PictureBox marca = new();
         private readonly BotonMenu btnPlegar = new("Contraer menú", SimboloAgenda.Anterior);
         private readonly BotonMenu btnInicio = new("Inicio", SimboloAgenda.Inicio);
+        private readonly BotonMenu btnCitas = new("Citas", SimboloAgenda.Calendario);
         private readonly BotonMenu btnClientes = new("Clientes", SimboloAgenda.Clientes);
         private readonly BotonMenu btnServicios = new("Servicios", SimboloAgenda.Servicios);
         private readonly BotonMenu btnProductos = new("Productos", SimboloAgenda.Productos);
@@ -113,7 +114,7 @@ namespace SistemaGestionCitas.src.Forms
             estructura.Controls.Add(marcaMenu, 0, 0);
 
             var navegacion = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Margin = new Padding(9, 0, 9, 0) };
-            botones.AddRange([btnInicio, btnClientes, btnServicios, btnProductos, btnEmpleados,
+            botones.AddRange([btnInicio, btnCitas, btnClientes, btnServicios, btnProductos, btnEmpleados,
                 btnUsuario, btnCrearUsuario, btnCrearRol, btnCerrarSesion]);
             for (int i = botones.Count - 2; i >= 0; i--)
             {
@@ -124,6 +125,7 @@ namespace SistemaGestionCitas.src.Forms
                 navegacion.Controls.Add(boton);
             }
             btnInicio.Click += (_, _) => VolverAInicio();
+            btnCitas.Click += (_, _) => AbrirCitas();
             btnClientes.Click += (_, _) => AbrirConsulta<FrmClientes>("Clientes");
             btnServicios.Click += (_, _) => AbrirConsulta<FrmServicios>("Servicios");
             btnProductos.Click += (_, _) => AbrirConsulta<FrmProductos>("Productos");
@@ -255,7 +257,7 @@ namespace SistemaGestionCitas.src.Forms
         {
             bool consultar = SesionActual.TienePermiso(PermisosSistema.Consultar);
             bool usuarios = SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
-            btnClientes.Visible = btnServicios.Visible = btnProductos.Visible = btnEmpleados.Visible = consultar;
+            btnCitas.Visible = btnClientes.Visible = btnServicios.Visible = btnProductos.Visible = btnEmpleados.Visible = consultar;
             btnUsuario.Visible = btnCrearUsuario.Visible = usuarios;
             btnCrearRol.Visible = SesionActual.TienePermiso(PermisosSistema.CrearRoles);
             if (iniciado) agenda.ActualizarPermiso();
@@ -267,7 +269,14 @@ namespace SistemaGestionCitas.src.Forms
                 AbrirModulo<T>(seccion);
         }
 
-        private void AbrirModulo<T>(string seccion) where T : Form, new()
+        private void AbrirCitas()
+        {
+            if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar citas")) return;
+            if (!ActivarHijoAbierto(typeof(FrmCitas)))
+                MostrarHijo(new FrmCitas(agenda.FechaSeleccionada, agenda.ActualizarCitas), "Citas");
+        }
+
+        internal void AbrirModulo<T>(string seccion) where T : Form, new()
         {
             // Consultar las ventanas abiertas antes de construir controles para otra instancia.
             if (!ActivarHijoAbierto(typeof(T))) MostrarHijo(new T(), seccion);
@@ -308,8 +317,9 @@ namespace SistemaGestionCitas.src.Forms
             SeleccionarMenu(botonModal ?? (seccion switch
             {
                 "Clientes" or "Reporte de clientes" => btnClientes,
+                "Citas" => btnCitas,
                 "Servicios" => btnServicios,
-                "Productos" => btnProductos,
+                "Productos" or "Reporte de inventario" => btnProductos,
                 "Empleados" => btnEmpleados,
                 "Usuarios" => btnUsuario,
                 _ => btnInicio

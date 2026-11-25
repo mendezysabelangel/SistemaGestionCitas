@@ -19,9 +19,19 @@ public sealed class CitaService
         if (!SesionActual.HaySesion || !SesionActual.TienePermiso(PermisosSistema.Agregar))
             throw new UnauthorizedAccessException("No tiene permiso para registrar citas.");
 
-        return (new ClienteRepository().Buscar(null, null, true),
-            new EmpleadoRepository().Buscar(null, true), new ServicioRepository().Buscar(null, true));
+        return ObtenerOpcionesActivas();
     }
+
+    internal (List<Cliente> Clientes, List<Empleado> Empleados, List<Servicio> Servicios) ObtenerOpcionesEdicion()
+    {
+        ExigirPermisoConsulta();
+        if (!PuedeModificar()) throw new UnauthorizedAccessException("No tiene permiso para editar citas.");
+        return ObtenerOpcionesActivas();
+    }
+
+    private static (List<Cliente> Clientes, List<Empleado> Empleados, List<Servicio> Servicios) ObtenerOpcionesActivas() =>
+        (new ClienteRepository().Buscar(null, null, true),
+            new EmpleadoRepository().Buscar(null, true), new ServicioRepository().Buscar(null, true));
 
     public async Task<IReadOnlyList<Cita>> ConsultarPorFechaAsync(DateOnly fecha, CancellationToken cancelacion = default)
     {
@@ -149,13 +159,7 @@ public sealed class CitaService
             if (actual == null)
                 return new(false, "La cita no existe.");
 
-            bool permitido = actual.Estado switch
-            {
-                Pendiente => destino is Confirmada or Cancelada,
-                Confirmada => destino is Completada or Cancelada or NoAsistio,
-                _ => false
-            };
-            if (!permitido)
+            if (!PermiteTransicion(actual.Estado, destino))
                 return new(false, $"No se puede cambiar una cita de «{actual.Estado}» a «{destino}».");
             int? estado = await repositorio.BuscarEstadoActivoAsync(destino, transaccion, cancelacion).ConfigureAwait(false);
             if (estado is not int idEstado)
@@ -204,7 +208,14 @@ public sealed class CitaService
             : new(true, "El horario está disponible.", horaFin);
     }
 
-    private static bool Editable(string estado) => estado is Pendiente or Confirmada;
+    internal static bool Editable(string estado) => estado is Pendiente or Confirmada;
+
+    internal static bool PermiteTransicion(string origen, string destino) => origen switch
+    {
+        Pendiente => destino is Confirmada or Cancelada,
+        Confirmada => destino is Completada or Cancelada or NoAsistio,
+        _ => false
+    };
 
     private static bool PuedeModificar() => SesionActual.HaySesion && SesionActual.TienePermiso(PermisosSistema.Modificar);
 

@@ -14,7 +14,7 @@ namespace SistemaGestionCitas.src.Forms
         private readonly ComboBox buscarStock = ControlesRegistro.Opciones("Todos", "Agotado", "Stock bajo", "Disponible");
         private readonly Font nombreProducto = new("Segoe UI", 11F, FontStyle.Bold);
         private readonly VistaRegistros<Producto> vista = new("Productos", "Catálogo y control de inventario",
-            "Buscar por nombre o código", "producto", p => p.IdProducto);
+            "Buscar por nombre o código", "producto", p => p.IdProducto, "Reporte de inventario");
         private List<CategoriaProducto>? categorias;
 
         public FrmProductos()
@@ -60,6 +60,7 @@ namespace SistemaGestionCitas.src.Forms
             vista.Editar += AbrirEditor;
             vista.Eliminar += async producto => await vista.EliminarConfirmadoAsync($"{producto.Nombre} ({producto.Codigo})",
                 () => new ProductoService().Eliminar(producto.IdProducto), () => Consultar(sinSeleccion: true));
+            vista.AccionExtra!.Click += BtnReporteInventario_Click;
             Controls.Add(vista);
             vista.ActualizarPermisos();
             Shown += (_, _) =>
@@ -68,6 +69,21 @@ namespace SistemaGestionCitas.src.Forms
                 Consultar();
             };
             ResumeLayout(true);
+        }
+
+        private void BtnReporteInventario_Click(object? sender, EventArgs e)
+        {
+            if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar el reporte de inventario"))
+                return;
+
+            if (MdiParent is FrmDashboard dashboard)
+            {
+                dashboard.AbrirModulo<FrmReporteInventario>("Reporte de inventario");
+                return;
+            }
+
+            using var reporte = new FrmReporteInventario();
+            reporte.ShowDialog(this);
         }
 
         private void Consultar(int? seleccionado = null, bool sinSeleccion = false)

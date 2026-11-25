@@ -97,10 +97,12 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     private readonly string singular;
     private readonly string permisoConsulta;
     private readonly string permisoNuevo;
+    private readonly bool femenino;
     private Button? accionFichaAdicional;
     private Button? desbloquear;
     private Func<T, bool>? puedeDesbloquear;
     private Func<T, bool>? puedeEliminar;
+    private Func<T, bool>? puedeEditar;
     private List<T> registros = new();
     private Action? accionEstadoActual;
     private bool aplicando;
@@ -111,7 +113,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     private bool? compacto;
     private Solicitud? pendiente;
 
-    private sealed record Solicitud(Func<(List<T> Datos, Action? AlAplicar)> Buscar, bool Filtrada, int? Id, bool ConservarSeleccion);
+    private sealed record Solicitud(Func<Task<(List<T> Datos, Action? AlAplicar)>> Buscar, bool Filtrada, int? Id, bool ConservarSeleccion);
     internal RejillaRegistros Tabla { get; } = new() { Dock = DockStyle.Fill };
     internal TextBox Busqueda { get; } = new();
     internal Button? AccionExtra { get; }
@@ -126,12 +128,14 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
 
     internal VistaRegistros(string titulo, string subtitulo, string buscar, string singular, Func<T, int> idDe,
         string? accionExtra = null, string permisoConsulta = PermisosSistema.Consultar,
-        string permisoNuevo = PermisosSistema.Agregar, string? etiquetaConsulta = null)
+        string permisoNuevo = PermisosSistema.Agregar, string? etiquetaConsulta = null,
+        Control? campoConsulta = null, bool femenino = false)
     {
         this.idDe = idDe;
         this.singular = singular;
         this.permisoConsulta = permisoConsulta;
         this.permisoNuevo = permisoNuevo;
+        this.femenino = femenino;
         plural = titulo.ToLowerInvariant();
         SuspendLayout();
         Size = new Size(1040, 650);
@@ -141,7 +145,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         ResizeRedraw = true;
         Font = fuenteBase;
         BackColor = EstiloAgenda.Fondo;
-        nuevo = ControlesRegistro.Boton($"Nuevo {singular}", ControlesRegistro.Primario, Color.White);
+        nuevo = ControlesRegistro.Boton($"{(femenino ? "Nueva" : "Nuevo")} {singular}", ControlesRegistro.Primario, Color.White);
         AccionExtra = accionExtra == null ? null : ControlesRegistro.Boton(accionExtra);
         nuevo.Click += (_, _) => Nuevo?.Invoke();
         editar.Click += (_, _) => { if (Seleccion is { } fila) Editar?.Invoke(fila); };
@@ -160,7 +164,8 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         pagina.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         pagina.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         pagina.Controls.Add(ConstruirCabecera(titulo, subtitulo), 0, 0);
-        pagina.Controls.Add(ConstruirBusqueda(buscar, etiquetaConsulta ?? "Consultar"), 0, 1);
+        pagina.Controls.Add(campoConsulta == null ? ConstruirBusqueda(buscar, etiquetaConsulta ?? "Consultar")
+            : ConstruirConsultaPorCampo(buscar, campoConsulta), 0, 1);
 
         filtros.Dock = DockStyle.Fill;
         filtros.AutoSize = true;
@@ -176,7 +181,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         ConstruirListado();
         ConstruirFicha();
         Controls.Add(pagina);
-        PresentarFicha($"Selecciona un {singular} para ver sus datos");
+        PresentarFicha($"Selecciona {(femenino ? "una" : "un")} {singular} para ver sus datos");
         MostrarEstado($"Cargando {plural}…");
         Ajustar();
         ResumeLayout(true);
@@ -249,6 +254,22 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         consultar.Anchor = AnchorStyles.Left;
         consultar.Click += (_, _) => Consultar?.Invoke();
         barra.Controls.Add(consultar, 2, 0);
+        return barra;
+    }
+
+    private Control ConstruirConsultaPorCampo(string nombre, Control campo)
+    {
+        var barra = new FlowLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, WrapContents = false };
+        Label etiqueta = Rotulo(nombre);
+        etiqueta.Margin = new Padding(0, 12, 8, 0);
+        Control entrada = CampoCitorna.Enmarcar(campo, nombre);
+        entrada.Dock = DockStyle.None;
+        entrada.Width = 160;
+        entrada.Margin = new Padding(0, 3, 6, 0);
+        campo.KeyDown += BuscarConEnter;
+        Button consultar = ControlesRegistro.Boton("Consultar");
+        consultar.Click += (_, _) => Consultar?.Invoke();
+        barra.Controls.AddRange([etiqueta, entrada, consultar]);
         return barra;
     }
 
@@ -404,6 +425,20 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
 
     internal T? Registro(int indice) => indice >= 0 && indice < registros.Count ? registros[indice] : null;
 
+    internal void ConfigurarAccionFicha(string texto, Func<T, bool> permitirEdicion, Action<Button, T> ejecutar)
+    {
+        puedeEditar = permitirEdicion;
+        var boton = ControlesRegistro.Boton(texto);
+        boton.Click += (_, _) =>
+        {
+            if (Seleccion is { } elegido) ejecutar(boton, elegido);
+        };
+        accionFichaAdicional = boton;
+        accionesFicha.Controls.Add(boton);
+        accionesFicha.WrapContents = true;
+        ((TableLayoutPanel)accionesFicha.Parent!).RowStyles[2].Height = 96;
+    }
+
     internal void ConfigurarAccionesCuenta(Func<T, bool> permitirBorrado, Action<T> cambiarPassword,
         Func<T, bool> tieneBloqueo, Action<T> desbloquearCuenta)
     {
@@ -431,7 +466,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     internal void ActualizarPermisos()
     {
         bool consultar = SesionActual.TienePermiso(permisoConsulta);
-        nuevo.Visible = consultar && SesionActual.TienePermiso(permisoNuevo);
+        nuevo.Visible = Nuevo != null && consultar && SesionActual.TienePermiso(permisoNuevo);
         if (AccionExtra != null) AccionExtra.Visible = consultar;
         ActualizarAcciones();
     }
@@ -447,10 +482,11 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         nuevo.Enabled = !ocupado;
         T? elegido = Seleccion;
         bool seleccion = elegido != null && SesionActual.TienePermiso(permisoConsulta);
-        bool modificar = seleccion && SesionActual.TienePermiso(PermisosSistema.Modificar);
+        bool modificar = seleccion && SesionActual.TienePermiso(PermisosSistema.Modificar)
+            && (puedeEditar?.Invoke(elegido!) ?? true);
         bool disponible = !ocupado && !consultando && datosVigentes;
         editar.Visible = modificar;
-        eliminar.Visible = seleccion && SesionActual.TienePermiso(PermisosSistema.Eliminar);
+        eliminar.Visible = Eliminar != null && seleccion && SesionActual.TienePermiso(PermisosSistema.Eliminar);
         editar.Enabled = disponible;
         eliminar.Enabled = disponible && elegido != null && (puedeEliminar?.Invoke(elegido) ?? true);
         if (accionFichaAdicional != null)
@@ -512,7 +548,11 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         return false;
     }
 
-    internal async void Cargar(Func<(List<T> Datos, Action? AlAplicar)> buscar, bool filtrada, int? id = null, bool sinSeleccion = false)
+    internal void Cargar(Func<(List<T> Datos, Action? AlAplicar)> buscar, bool filtrada, int? id = null, bool sinSeleccion = false) =>
+        CargarAsync(() => Task.Run(buscar), filtrada, id, sinSeleccion);
+
+    internal async void CargarAsync(Func<Task<(List<T> Datos, Action? AlAplicar)>> buscar, bool filtrada,
+        int? id = null, bool sinSeleccion = false)
     {
         if (destruido || !SesionActual.VerificarPermiso(permisoConsulta, $"consultar {plural}")) return;
         pendiente = new Solicitud(buscar, filtrada, sinSeleccion ? null : id, !sinSeleccion && id == null);
@@ -530,7 +570,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
                 var reloj = Stopwatch.StartNew();
                 try
                 {
-                    var resultado = await Task.Run(solicitud.Buscar);
+                    var resultado = await solicitud.Buscar();
                     long consultaMs = reloj.ElapsedMilliseconds;
                     if (destruido || pendiente != null || !SesionActual.TienePermiso(permisoConsulta)) continue;
                     resultado.AlAplicar?.Invoke();
@@ -542,7 +582,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
                 {
                     Trace.TraceWarning("Citorna {0}: {1}", plural, ex.GetType().Name);
                     if (!destruido && pendiente == null)
-                        MostrarEstado(registros.Count == 0 ? $"No se pudieron cargar los {plural}."
+                        MostrarEstado(registros.Count == 0 ? $"No se pudieron cargar {(femenino ? "las" : "los")} {plural}."
                             : "No se pudo actualizar. Se conservan los resultados anteriores.", "Reintentar", () => (ReintentarConsulta ?? Consultar)?.Invoke());
                 }
             }
@@ -587,7 +627,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         else if (solicitud.Filtrada)
             MostrarEstado($"No se encontraron {plural} con estos filtros.", "Restablecer", () => Restablecer?.Invoke());
         else
-            MostrarEstado($"Aún no hay {plural} registrados.");
+            MostrarEstado($"Aún no hay {plural} {(femenino ? "registradas" : "registrados")}.");
     }
 
     private void MostrarEstado(string mensaje, string? accion = null, Action? callback = null)
@@ -614,7 +654,10 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         });
     }
 
-    internal async Task EjecutarOperacionAsync(string titulo, Func<ResultadoOperacion> ejecutar,
+    internal Task EjecutarOperacionAsync(string titulo, Func<ResultadoOperacion> ejecutar, Action<ResultadoOperacion> presentar) =>
+        EjecutarOperacionAsync(titulo, () => Task.Run(ejecutar), presentar);
+
+    internal async Task EjecutarOperacionAsync(string titulo, Func<Task<ResultadoOperacion>> ejecutar,
         Action<ResultadoOperacion> presentar)
     {
         if (ocupado) return;
@@ -622,7 +665,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         ActualizarAcciones();
         try
         {
-            ResultadoOperacion resultado = await Task.Run(ejecutar);
+            ResultadoOperacion resultado = await ejecutar();
             if (!destruido) presentar(resultado);
         }
         catch (Exception ex)

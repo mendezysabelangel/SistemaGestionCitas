@@ -39,6 +39,9 @@ internal sealed class AgendaInicio : UserControl
     private bool? permisoAnterior;
     private bool cerrando;
 
+    internal DateTime FechaSeleccionada => seleccion;
+    internal void ActualizarCitas() => SolicitarDatos();
+
     public AgendaInicio()
     {
         SuspendLayout();
@@ -431,7 +434,7 @@ internal sealed class AgendaInicio : UserControl
             return;
 
         using var formulario = new FrmNuevaCita(seleccion);
-        if (formulario.ShowDialog(FindForm()) != DialogResult.OK || formulario.FechaRegistrada is not DateTime fecha)
+        if (formulario.ShowDialog(FindForm()) != DialogResult.OK || formulario.FechaGuardada is not DateTime fecha)
             return;
 
         if (seleccion == fecha) SolicitarDatos();
