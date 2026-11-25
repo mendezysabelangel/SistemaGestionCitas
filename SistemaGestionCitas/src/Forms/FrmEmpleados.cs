@@ -110,6 +110,7 @@ public class FrmEmpleados : Form
             };
             return edicion ? () => servicio.Modificar(datos) : () => servicio.Registrar(datos);
         };
+        vista.Paleta.AplicarDialogo(editor);
         if (editor.ShowDialog(this) == DialogResult.OK) Consultar(empleado?.IdEmpleado, sinSeleccion: !edicion);
     }
 }

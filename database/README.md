@@ -43,10 +43,10 @@ El código del producto es único y el precio, mayor que cero.
 ## Bitácora de Citas
 
 Después de crear las tablas base, ejecuta `scripts/005_CreateBitacoraCitas.sql`
-antes de registrar, confirmar o cancelar citas con la versión que incluye la
+antes de registrar, editar o cambiar el estado de citas con la versión que incluye la
 bitácora. El script puede ejecutarse de nuevo y conserva los eventos guardados.
 Los eventos se generan desde la instalación de la bitácora en adelante.
 
 En Citorna, la opción **Bitácora** requiere los permisos `Consultar` y
-`CrearUsuarios`. La pantalla muestra la actividad reciente de registro,
-confirmación y cancelación de citas.
+`CrearUsuarios`. La pantalla muestra la actividad reciente de registro, edición,
+confirmación, finalización, cancelación e inasistencia de citas.

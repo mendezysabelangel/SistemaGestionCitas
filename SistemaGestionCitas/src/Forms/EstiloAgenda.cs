@@ -30,6 +30,11 @@ internal sealed class TarjetaAgenda : Panel
 {
     internal int Radio { get; init; } = 15;
     internal bool ResaltarFoco { get; init; }
+    private PaletaCitorna paleta = PaletaCitorna.Clara;
+    internal PaletaCitorna Paleta
+    {
+        set { paleta = value; Invalidate(); }
+    }
     public TarjetaAgenda()
     {
         DoubleBuffered = true;
@@ -40,12 +45,13 @@ internal sealed class TarjetaAgenda : Panel
     protected override void OnPaintBackground(PaintEventArgs e)
     {
         int radio = LogicalToDeviceUnits(Radio);
-        // Un hijo que sólo cubre el interior blanco no necesita volver a pintar la imagen de fondo.
+        // El interior de la tarjeta no necesita volver a pintar la imagen de fondo.
+        using SolidBrush fondo = new(paleta.Superficie);
         if (Width > 2 * radio + 4 && Height > 2 * radio + 4
             && (new Rectangle(radio + 2, 3, Width - 2 * radio - 4, Height - 6).Contains(e.ClipRectangle)
                 || new Rectangle(3, radio + 2, Width - 6, Height - 2 * radio - 4).Contains(e.ClipRectangle)))
         {
-            e.Graphics.FillRectangle(Brushes.White, e.ClipRectangle);
+            e.Graphics.FillRectangle(fondo, e.ClipRectangle);
             return;
         }
 
@@ -54,15 +60,21 @@ internal sealed class TarjetaAgenda : Panel
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(new RectangleF(1, 1, Width - 3, Height - 3), radio);
         bool enfocada = ResaltarFoco && ContainsFocus;
-        using Pen borde = new(enfocada ? EstiloAgenda.Azul : EstiloAgenda.Borde,
+        using Pen borde = new(enfocada ? paleta.Acento : paleta.Borde,
             enfocada ? LogicalToDeviceUnits(2) : 1);
-        e.Graphics.FillPath(Brushes.White, forma);
+        e.Graphics.FillPath(fondo, forma);
         e.Graphics.DrawPath(borde, forma);
     }
 }
 
 internal sealed class OndasMenu : Control
 {
+    private PaletaCitorna paleta = PaletaCitorna.Clara;
+    internal PaletaCitorna Paleta
+    {
+        set { paleta = value; BackColor = value.Barra; Invalidate(); }
+    }
+
     public OndasMenu()
     {
         DoubleBuffered = true;
@@ -84,10 +96,10 @@ internal sealed class OndasMenu : Control
         oscura.AddBezier(0, Height * .33F, Width * .38F, 0, Width * .46F, Height * 1.25F, Width, Height * .48F);
         oscura.AddLine(Width, Height, 0, Height);
         oscura.CloseFigure();
-        using SolidBrush azulClaro = new(Color.FromArgb(219, 235, 253));
-        using SolidBrush azulSuave = new(Color.FromArgb(124, 173, 225, 245));
-        e.Graphics.FillPath(azulClaro, clara);
-        e.Graphics.FillPath(azulSuave, oscura);
+        using SolidBrush rellenoClaro = new(paleta.OndaClara);
+        using SolidBrush rellenoSuave = new(paleta.OndaSuave);
+        e.Graphics.FillPath(rellenoClaro, clara);
+        e.Graphics.FillPath(rellenoSuave, oscura);
     }
 }
 

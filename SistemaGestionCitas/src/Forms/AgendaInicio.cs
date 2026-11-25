@@ -13,6 +13,8 @@ internal sealed class AgendaInicio : UserControl
     private static readonly string[] Semana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     private readonly AgendaRepository repositorio = new();
     private readonly Button[] dias = new Button[42];
+    private readonly Label[] diasSemana = new Label[7];
+    private readonly TableLayoutPanel cuadriculaDias = new();
     private readonly Label[] valores = new Label[3];
     private readonly Control[] iconosIndicadores = new Control[3];
     private readonly Label lblMes = new();
@@ -20,8 +22,10 @@ internal sealed class AgendaInicio : UserControl
     private readonly Label lblEstado = new();
     private readonly Button anterior;
     private readonly Button siguiente;
-    private readonly Button reintentar = new();
+    private readonly Button reintentar = new BotonCitorna();
     private readonly Button nuevaCita = ControlesRegistro.Boton("Nueva cita", ControlesRegistro.Primario, Color.White);
+    private readonly CheckBox modoOscuro = PaletaCitorna.CrearInterruptor();
+    private PaletaCitorna paleta = PaletaCitorna.Clara;
     private readonly DataGridView lista = new();
     private readonly TableLayoutPanel pagina = new();
     private readonly TableLayoutPanel zonaAgenda = new();
@@ -41,6 +45,21 @@ internal sealed class AgendaInicio : UserControl
 
     internal DateTime FechaSeleccionada => seleccion;
     internal void ActualizarCitas() => SolicitarDatos();
+    internal event Action<bool>? TemaCambiado;
+
+    internal void AplicarPaleta(PaletaCitorna nueva)
+    {
+        if (paleta == nueva) return;
+        paleta = nueva;
+        modoOscuro.Checked = nueva.EsOscura;
+        BackColor = nueva.Fondo;
+        nueva.AplicarControles(this);
+        cuadriculaDias.BackColor = nueva.Borde;
+        foreach (Label dia in diasSemana) dia.BackColor = nueva.Encabezado;
+        DibujarCalendario();
+        foreach (DataGridViewRow fila in lista.Rows) ColorearEstado(fila.Cells[3]);
+        Invalidate(true);
+    }
 
     public AgendaInicio()
     {
@@ -63,8 +82,9 @@ internal sealed class AgendaInicio : UserControl
         pagina.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
         pagina.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var cabecera = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
+        var cabecera = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 2, Margin = Padding.Empty };
         cabecera.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        cabecera.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         cabecera.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         cabecera.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
         cabecera.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -76,6 +96,9 @@ internal sealed class AgendaInicio : UserControl
         nuevaCita.Click += (_, _) => AbrirNuevaCita();
         cabecera.Controls.Add(nuevaCita, 1, 0);
         cabecera.SetRowSpan(nuevaCita, 2);
+        modoOscuro.CheckedChanged += (_, _) => TemaCambiado?.Invoke(modoOscuro.Checked);
+        cabecera.Controls.Add(modoOscuro, 2, 0);
+        cabecera.SetRowSpan(modoOscuro, 2);
         pagina.Controls.Add(cabecera, 0, 0);
         Cabecera(pagina, "Hoy", enfasis, 1);
         pagina.Controls.Add(CrearIndicadores(), 0, 2);
@@ -94,7 +117,7 @@ internal sealed class AgendaInicio : UserControl
     private static void Cabecera(TableLayoutPanel tabla, string texto, Font? fuente, int fila, Color? color = null)
     {
         var rotulo = new Label { Text = texto, Dock = DockStyle.Fill, Margin = Padding.Empty,
-            TextAlign = ContentAlignment.MiddleLeft, ForeColor = color ?? EstiloAgenda.Tinta };
+            AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft, ForeColor = color ?? EstiloAgenda.Tinta };
         if (fuente != null) rotulo.Font = fuente;
         tabla.Controls.Add(rotulo, 0, fila);
     }
@@ -123,7 +146,7 @@ internal sealed class AgendaInicio : UserControl
             icono.Paint += (_, e) =>
             {
                 int lado = icono.LogicalToDeviceUnits(22);
-                IconosAgenda.Dibujar(e.Graphics, simbolo, EstiloAgenda.Tinta, new(0, (icono.Height - lado) / 2, lado, lado));
+                IconosAgenda.Dibujar(e.Graphics, simbolo, paleta.Tinta, new(0, (icono.Height - lado) / 2, lado, lado));
             };
             iconosIndicadores[i] = icono;
             columnas.Controls.Add(etiqueta, 0, 0);
@@ -160,14 +183,19 @@ internal sealed class AgendaInicio : UserControl
         selector.Controls.Add(siguiente, 2, 0);
         tabla.Controls.Add(selector, 0, 0);
 
-        var cuadricula = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 7, RowCount = 7,
-            Margin = Padding.Empty, Padding = new Padding(1, 1, 0, 0), BackColor = EstiloAgenda.Borde };
+        TableLayoutPanel cuadricula = cuadriculaDias;
+        cuadricula.Dock = DockStyle.Fill;
+        cuadricula.ColumnCount = cuadricula.RowCount = 7;
+        cuadricula.Margin = Padding.Empty;
+        cuadricula.Padding = new Padding(1, 1, 0, 0);
+        cuadricula.BackColor = EstiloAgenda.Borde;
         cuadricula.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
         for (int d = 0; d < 7; d++)
         {
             cuadricula.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 7));
             var diaSemana = new Label { Text = Semana[d], Margin = new Padding(0, 0, 1, 1), Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter, ForeColor = EstiloAgenda.Tinta, BackColor = EstiloAgenda.Fondo };
+            diasSemana[d] = diaSemana;
             cuadricula.Controls.Add(diaSemana, d, 0);
         }
         for (int fila = 0; fila < 6; fila++)
@@ -191,7 +219,9 @@ internal sealed class AgendaInicio : UserControl
                 {
                     if (dia.Tag is not DateTime fecha || !diasConCitas.ContainsKey(fecha)) return;
                     int lado = dia.LogicalToDeviceUnits(5);
-                    using SolidBrush marca = new(fecha == seleccion ? Color.FromArgb(174, 238, 218) : EstiloAgenda.Turquesa);
+                    Color color = paleta.EsOscura ? paleta.Acento
+                        : fecha == seleccion ? Color.FromArgb(174, 238, 218) : EstiloAgenda.Turquesa;
+                    using SolidBrush marca = new(color);
                     e.Graphics.FillEllipse(marca, (dia.Width - lado) / 2, dia.Height - lado - dia.LogicalToDeviceUnits(4), lado, lado);
                 };
                 dias[fila * 7 + columna] = dia;
@@ -305,7 +335,7 @@ internal sealed class AgendaInicio : UserControl
         return boton;
     }
 
-    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e);
+    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e, paleta);
 
     protected override void OnResize(EventArgs e)
     {
@@ -369,7 +399,7 @@ internal sealed class AgendaInicio : UserControl
                 boton.AccessibleName = "";
                 boton.TabStop = false;
                 boton.Enabled = false;
-                boton.BackColor = Color.FromArgb(248, 251, 255);
+                boton.BackColor = paleta.DiaFueraDeMes;
                 boton.FlatAppearance.BorderSize = 0;
                 continue;
             }
@@ -384,11 +414,11 @@ internal sealed class AgendaInicio : UserControl
             boton.AccessibleName = fecha.ToString("dddd, d 'de' MMMM 'de' yyyy", Espanol)
                 + (esHoy ? ", hoy" : "") + (elegida ? ", seleccionado" : "")
                 + (diasConCitas.TryGetValue(fecha, out long cantidad) ? $", {cantidad} citas" : "");
-            boton.BackColor = elegida ? EstiloAgenda.Azul : Color.White;
-            boton.ForeColor = elegida ? Color.White : EstiloAgenda.Tinta;
+            boton.BackColor = elegida ? paleta.DiaSeleccionado : paleta.Superficie;
+            boton.ForeColor = elegida ? Color.White : paleta.Tinta;
             boton.FlatAppearance.BorderSize = esHoy && !elegida ? 2 : 0;
-            boton.FlatAppearance.BorderColor = EstiloAgenda.Azul;
-            boton.FlatAppearance.MouseOverBackColor = elegida ? EstiloAgenda.Azul : EstiloAgenda.Seleccion;
+            boton.FlatAppearance.BorderColor = paleta.Acento;
+            boton.FlatAppearance.MouseOverBackColor = elegida ? paleta.DiaSeleccionado : paleta.Seleccion;
             boton.FlatAppearance.MouseDownBackColor = boton.FlatAppearance.MouseOverBackColor;
             boton.Invalidate();
         }
@@ -522,10 +552,7 @@ internal sealed class AgendaInicio : UserControl
         {
             string hora = DateTime.MinValue.Add(cita.Hora).ToString("h:mm tt", CultureInfo.InvariantCulture);
             int fila = lista.Rows.Add(hora, cita.Cliente, cita.Servicio, cita.Estado);
-            if (cita.Estado == "Confirmada")
-                ColorearEstado(lista.Rows[fila].Cells[3], Color.FromArgb(221, 241, 232), Color.FromArgb(0, 78, 60));
-            else if (cita.Estado == "Pendiente")
-                ColorearEstado(lista.Rows[fila].Cells[3], Color.FromArgb(251, 239, 213), Color.FromArgb(104, 66, 14));
+            ColorearEstado(lista.Rows[fila].Cells[3]);
         }
 
         if (lista.Rows.Count == 0)
@@ -538,10 +565,19 @@ internal sealed class AgendaInicio : UserControl
         }
     }
 
-    private static void ColorearEstado(DataGridViewCell celda, Color fondo, Color texto)
+    private void ColorearEstado(DataGridViewCell celda)
     {
-        celda.Style.BackColor = fondo;
-        celda.Style.ForeColor = texto;
+        switch (celda.Value)
+        {
+            case "Confirmada":
+                celda.Style.BackColor = paleta.EsOscura ? Color.FromArgb(32, 60, 54) : Color.FromArgb(221, 241, 232);
+                celda.Style.ForeColor = paleta.EsOscura ? Color.FromArgb(169, 236, 211) : Color.FromArgb(0, 78, 60);
+                break;
+            case "Pendiente":
+                celda.Style.BackColor = paleta.EsOscura ? Color.FromArgb(71, 55, 29) : Color.FromArgb(251, 239, 213);
+                celda.Style.ForeColor = paleta.EsOscura ? Color.FromArgb(244, 213, 146) : Color.FromArgb(104, 66, 14);
+                break;
+        }
     }
 
     private void LimpiarDatos()

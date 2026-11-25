@@ -26,14 +26,15 @@ internal static class FondoInterfaces
         return bitmap;
     }
 
-    internal static void Pintar(Control superficie, PaintEventArgs e)
+    internal static void Pintar(Control superficie, PaintEventArgs e, PaletaCitorna? paleta = null)
     {
         Rectangle destino = superficie.ClientRectangle;
         Rectangle visible = Rectangle.Intersect(e.ClipRectangle, destino);
         if (visible.Width <= 0 || visible.Height <= 0) return;
-        if (destino.Width < superficie.LogicalToDeviceUnits(590) || destino.Height < 1 || SystemInformation.HighContrast)
+        if (paleta?.EsOscura == true || destino.Width < superficie.LogicalToDeviceUnits(590) ||
+            destino.Height < 1 || SystemInformation.HighContrast)
         {
-            using var plano = new SolidBrush(EstiloAgenda.Fondo);
+            using var plano = new SolidBrush(paleta?.Fondo ?? EstiloAgenda.Fondo);
             e.Graphics.FillRectangle(plano, visible);
             return;
         }
@@ -66,6 +67,11 @@ internal sealed class BotonCitorna : Button
 {
     internal Color Relleno { get; set; } = Color.White;
     internal SimboloAgenda? Icono { get; init; }
+    private PaletaCitorna paleta = PaletaCitorna.Clara;
+    internal PaletaCitorna Paleta
+    {
+        set { paleta = value; Invalidate(); }
+    }
     private bool presionado;
 
     internal BotonCitorna()
@@ -86,22 +92,25 @@ internal sealed class BotonCitorna : Button
         var area = new RectangleF(1, 1, Width - 2, Height - 2);
         using var forma = EstiloAgenda.RectanguloRedondo(area, LogicalToDeviceUnits(9));
         bool encima = Enabled && ClientRectangle.Contains(PointToClient(MousePosition));
-        Color relleno = Relleno;
-        if (!Enabled) relleno = EstiloAgenda.Barra;
+        bool primario = Relleno != Color.White;
+        Color relleno = paleta.EsOscura ? (primario ? paleta.Principal : paleta.Superficie) : Relleno;
+        if (!Enabled) relleno = paleta.Barra;
         else if (encima || presionado)
         {
-            relleno = Relleno == Color.White ? EstiloAgenda.Barra
-                : ControlPaint.Dark(Relleno, presionado ? .16F : .07F);
+            relleno = !primario ? (paleta.EsOscura ? paleta.Encabezado : EstiloAgenda.Barra)
+                : ControlPaint.Dark(relleno, presionado ? .16F : .07F);
         }
         using var fondo = new SolidBrush(relleno);
         g.FillPath(fondo, forma);
         if (FlatAppearance.BorderSize > 0)
         {
-            using var borde = new Pen(FlatAppearance.BorderColor);
+            using var borde = new Pen(paleta.EsOscura ? paleta.Borde : FlatAppearance.BorderColor);
             g.DrawPath(borde, forma);
         }
 
-        Color tinta = Enabled ? ForeColor : SystemColors.GrayText;
+        Color tinta = paleta.EsOscura
+            ? (Enabled ? (primario ? Color.White : ForeColor == ControlesRegistro.Peligro ? paleta.Error : paleta.Tinta) : paleta.Secundario)
+            : (Enabled ? ForeColor : SystemColors.GrayText);
         if (Icono is { } icono)
         {
             int lado = LogicalToDeviceUnits(22);
@@ -121,7 +130,7 @@ internal sealed class BotonCitorna : Button
         {
             var interior = new RectangleF(margen, margen, Width - 2 * margen - 1, Height - 2 * margen - 1);
             using var formaFoco = EstiloAgenda.RectanguloRedondo(interior, LogicalToDeviceUnits(6));
-            using var foco = new Pen(ForeColor, LogicalToDeviceUnits(2));
+            using var foco = new Pen(paleta.EsOscura ? paleta.Acento : ForeColor, LogicalToDeviceUnits(2));
             g.DrawPath(foco, formaFoco);
         }
     }

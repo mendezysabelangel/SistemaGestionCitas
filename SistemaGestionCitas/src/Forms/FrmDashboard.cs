@@ -15,7 +15,9 @@ namespace SistemaGestionCitas.src.Forms
         private readonly Font fuente;
         private readonly Font fuenteActiva;
         private readonly AgendaInicio agenda;
-        private readonly PictureBox marca = new();
+        private readonly MarcaMenu marca = new();
+        private readonly TableLayoutPanel estructuraMenu = new();
+        private readonly OndasMenu ondas = new() { Dock = DockStyle.Fill, Margin = Padding.Empty };
         private readonly BotonMenu btnPlegar = new("Contraer menú", SimboloAgenda.Anterior);
         private readonly BotonMenu btnInicio = new("Inicio", SimboloAgenda.Inicio);
         private readonly BotonMenu btnCitas = new("Citas", SimboloAgenda.Calendario);
@@ -37,10 +39,16 @@ namespace SistemaGestionCitas.src.Forms
         private bool modoAplicadoContraido;
         private bool iniciado;
         private int anchoInicial;
+        private bool usarModoOscuro;
+        private readonly int? usuarioTema;
+        private PaletaCitorna paletaMenu = PaletaCitorna.Clara;
+        private Color? fondoMdiOriginal;
+        private PaletaCitorna PaletaSeleccionada => usarModoOscuro ? PaletaCitorna.Oscura : PaletaCitorna.Clara;
 
         public FrmDashboard()
         {
             InitializeComponent();
+            usuarioTema = SesionActual.UsuarioActual?.IdUsuario;
             SuspendLayout();
             IsMdiContainer = true;
             WindowState = FormWindowState.Maximized;
@@ -55,10 +63,12 @@ namespace SistemaGestionCitas.src.Forms
             animacionMenu = new System.Windows.Forms.Timer(components) { Interval = 15 };
             animacionMenu.Tick += (_, _) => AnimarMenu();
             agenda = new AgendaInicio { Dock = DockStyle.Fill };
+            agenda.TemaCambiado += CambiarModoOscuro;
             pnlContenido.Controls.Add(agenda);
             ConstruirMenu();
             CargarSesion();
             SeleccionarMenu(btnInicio, false);
+            if (usuarioTema is > 0 && PreferenciaTema.Leer(usuarioTema.Value)) AplicarTema(true);
             MdiChildActivate += (_, _) => ActualizarNavegacion();
             if (AreaMdi is { } area) area.SizeChanged += (_, _) => AjustarHijos();
             Shown += (_, _) =>
@@ -87,8 +97,12 @@ namespace SistemaGestionCitas.src.Forms
 
         private void ConstruirMenu()
         {
-            var estructura = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4,
-                BackColor = EstiloAgenda.Barra, TabStop = false };
+            TableLayoutPanel estructura = estructuraMenu;
+            estructura.Dock = DockStyle.Fill;
+            estructura.ColumnCount = 1;
+            estructura.RowCount = 4;
+            estructura.BackColor = EstiloAgenda.Barra;
+            estructura.TabStop = false;
             estructura.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             estructura.RowStyles.Add(new RowStyle(SizeType.Absolute, 140));
             estructura.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -163,7 +177,7 @@ namespace SistemaGestionCitas.src.Forms
                 Close();
             };
             estructura.Controls.Add(btnCerrarSesion, 0, 2);
-            estructura.Controls.Add(new OndasMenu { Dock = DockStyle.Fill, Margin = Padding.Empty }, 0, 3);
+            estructura.Controls.Add(ondas, 0, 3);
             pnlSidebar.Controls.Add(estructura);
         }
 
@@ -208,12 +222,16 @@ namespace SistemaGestionCitas.src.Forms
             if (botonActivo == seleccionado) return;
             if (botonActivo != null)
             {
+                botonActivo.Seleccionado = false;
                 botonActivo.Font = fuente;
                 botonActivo.AccessibleDescription = null;
+                botonActivo.Invalidate();
             }
             botonActivo = seleccionado;
+            seleccionado.Seleccionado = true;
             seleccionado.Font = fuenteActiva;
             seleccionado.AccessibleDescription = "Sección actual";
+            seleccionado.Invalidate();
             IniciarAnimacion(animar);
         }
 
@@ -279,8 +297,53 @@ namespace SistemaGestionCitas.src.Forms
         private void AbrirCitas()
         {
             if (!SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar citas")) return;
-            if (!ActivarHijoAbierto(typeof(FrmCitas)))
-                MostrarHijo(new FrmCitas(agenda.FechaSeleccionada, agenda.ActualizarCitas), "Citas");
+            if (ActivarHijoAbierto(typeof(FrmCitas))) return;
+
+            var citas = new FrmCitas(agenda.FechaSeleccionada, agenda.ActualizarCitas);
+            citas.TemaCambiado += CambiarModoOscuro;
+            MostrarHijo(citas, "Citas");
+        }
+
+        private void CambiarModoOscuro(bool oscuro)
+        {
+            if (usarModoOscuro == oscuro) return;
+            AplicarTema(oscuro);
+            if (usuarioTema is > 0) PreferenciaTema.Guardar(usuarioTema.Value, oscuro);
+        }
+
+        private void AplicarTema(bool oscuro)
+        {
+            usarModoOscuro = oscuro;
+            agenda.AplicarPaleta(PaletaSeleccionada);
+            foreach (Form hijo in MdiChildren) AplicarPaletaModulo(hijo);
+            ActualizarNavegacion();
+        }
+
+        private static bool UsaPaleta(Form formulario) => formulario is
+            FrmCitas or FrmClientes or FrmProductos or FrmServicios or FrmEmpleados or FrmUsuarios or FrmBitacoraCitas;
+
+        private void AplicarPaletaModulo(Form formulario)
+        {
+            if (formulario is FrmCitas citas) citas.AplicarPaleta(PaletaSeleccionada);
+            else if (formulario is FrmBitacoraCitas bitacora) bitacora.AplicarPaleta(PaletaSeleccionada);
+            else if (UsaPaleta(formulario)) PaletaSeleccionada.AplicarControles(formulario);
+        }
+
+        private void AplicarPaletaMenu(PaletaCitorna paleta)
+        {
+            if (paletaMenu == paleta) return;
+            paletaMenu = paleta;
+            pnlSidebar.BackColor = estructuraMenu.BackColor = paleta.Barra;
+            marca.MostrarFondo = paleta.EsOscura;
+            marca.Invalidate();
+            ondas.Paleta = paleta;
+            foreach (BotonMenu boton in botones) boton.Paleta = paleta;
+            btnPlegar.Paleta = paleta;
+            if (AreaMdi is { } mdi)
+            {
+                fondoMdiOriginal ??= mdi.BackColor;
+                mdi.BackColor = paleta.EsOscura ? paleta.Fondo : fondoMdiOriginal.Value;
+            }
         }
 
         internal void AbrirModulo<T>(string seccion) where T : Form, new()
@@ -291,6 +354,7 @@ namespace SistemaGestionCitas.src.Forms
 
         private void AbrirDialogo(Form formulario, BotonMenu boton)
         {
+            PaletaSeleccionada.AplicarDialogo(formulario);
             botonModal = boton;
             seccionModal = boton.Etiqueta;
             ActualizarNavegacion();
@@ -320,6 +384,8 @@ namespace SistemaGestionCitas.src.Forms
                 hijo = seccionesHijas.Keys.LastOrDefault(formulario => !formulario.IsDisposed && formulario.Visible);
             pnlContenido.Visible = hijo == null;
             string seccion = hijo == null ? "Inicio" : seccionesHijas[hijo];
+            bool oscuro = usarModoOscuro && (botonModal != null || hijo == null || UsaPaleta(hijo));
+            AplicarPaletaMenu(oscuro ? PaletaCitorna.Oscura : PaletaCitorna.Clara);
             Text = $"Citorna — {(botonModal != null ? seccionModal : seccion)}";
             SeleccionarMenu(botonModal ?? (seccion switch
             {
@@ -357,6 +423,7 @@ namespace SistemaGestionCitas.src.Forms
         private void MostrarHijo(Form hijo, string seccion)
         {
             if (pnlContenido.Visible) pnlContenido.Hide();
+            AplicarPaletaModulo(hijo);
             seccionesHijas[hijo] = seccion;
             hijo.FormClosed += (_, _) =>
             {
@@ -381,6 +448,21 @@ namespace SistemaGestionCitas.src.Forms
             }
         }
 
+        private sealed class MarcaMenu : PictureBox
+        {
+            internal bool MostrarFondo { get; set; }
+
+            protected override void OnPaintBackground(PaintEventArgs e)
+            {
+                base.OnPaintBackground(e);
+                if (!MostrarFondo || Width < 3 || Height < 3) return;
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(ClientRectangle, LogicalToDeviceUnits(10));
+                using var fondo = new SolidBrush(Color.FromArgb(195, 190, 213));
+                e.Graphics.FillPath(fondo, forma);
+            }
+        }
+
         private sealed class BotonMenu : Button
         {
             public string Etiqueta { get; }
@@ -388,6 +470,12 @@ namespace SistemaGestionCitas.src.Forms
             public bool SoloIcono { get; set; }
             public double Intensidad { get; set; }
             public double IntensidadInicial { get; set; }
+            internal bool Seleccionado { get; set; }
+            private PaletaCitorna paleta = PaletaCitorna.Clara;
+            internal PaletaCitorna Paleta
+            {
+                set { paleta = value; Invalidate(); }
+            }
 
             public BotonMenu(string texto, SimboloAgenda simbolo)
             {
@@ -408,35 +496,40 @@ namespace SistemaGestionCitas.src.Forms
 
             protected override void OnPaint(PaintEventArgs e)
             {
-                e.Graphics.Clear(EstiloAgenda.Barra);
+                e.Graphics.Clear(paleta.Barra);
                 if (Width < 6 || Height < 6) return;
                 int margen = LogicalToDeviceUnits(3);
                 var rect = new Rectangle(margen, margen, Width - margen * 2, Height - margen * 2);
                 if (rect.Width <= 0 || rect.Height <= 0) return;
                 bool encima = ClientRectangle.Contains(PointToClient(MousePosition));
-                if (Intensidad > 0 || encima || Focused)
+                double intensidad = paleta.EsOscura ? (Seleccionado ? 1 : 0) : Intensidad;
+                bool conFondo = intensidad > 0 || (!paleta.EsOscura && (encima || Focused));
+                bool conFoco = Focused && (!paleta.EsOscura || ShowFocusCues);
+                if (conFondo || conFoco)
                 {
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(rect, LogicalToDeviceUnits(9));
+                    Color seleccion = paleta.Seleccion;
+                    Color encimaMenu = paleta.SobreMenu;
                     using SolidBrush relleno = new(Color.FromArgb(
-                        (int)(EstiloAgenda.Seleccion.R * Intensidad + 239 * (1 - Intensidad)),
-                        (int)(EstiloAgenda.Seleccion.G * Intensidad + 246 * (1 - Intensidad)),
-                        (int)(EstiloAgenda.Seleccion.B * Intensidad + 254 * (1 - Intensidad))));
-                    e.Graphics.FillPath(relleno, forma);
-                    if (Focused)
+                        (int)(seleccion.R * intensidad + encimaMenu.R * (1 - intensidad)),
+                        (int)(seleccion.G * intensidad + encimaMenu.G * (1 - intensidad)),
+                        (int)(seleccion.B * intensidad + encimaMenu.B * (1 - intensidad))));
+                    if (conFondo) e.Graphics.FillPath(relleno, forma);
+                    if (conFoco)
                     {
-                        using Pen borde = new(EstiloAgenda.Azul, LogicalToDeviceUnits(2));
+                        using Pen borde = new(paleta.Acento, LogicalToDeviceUnits(2));
                         e.Graphics.DrawPath(borde, forma);
                     }
                 }
 
                 int lado = LogicalToDeviceUnits(23);
                 int x = SoloIcono ? (Width - lado) / 2 : LogicalToDeviceUnits(15);
-                IconosAgenda.Dibujar(e.Graphics, Simbolo, EstiloAgenda.Tinta, new(x, (Height - lado) / 2, lado, lado));
+                IconosAgenda.Dibujar(e.Graphics, Simbolo, paleta.Tinta, new(x, (Height - lado) / 2, lado, lado));
                 int izquierda = LogicalToDeviceUnits(54);
                 if (!SoloIcono && Width > izquierda + margen)
                     TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(izquierda, 0, Width - izquierda - margen, Height),
-                        EstiloAgenda.Tinta, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                        paleta.Tinta, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             }
 
             protected override void OnMouseEnter(EventArgs e)

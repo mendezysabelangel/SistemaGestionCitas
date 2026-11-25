@@ -127,6 +127,7 @@ public class FrmServicios : Form
             };
             return edicion ? () => servicio.Modificar(datos) : () => servicio.Registrar(datos);
         };
+        vista.Paleta.AplicarDialogo(editor);
         if (editor.ShowDialog(this) == DialogResult.OK) Consultar(registro?.IdServicio, sinSeleccion: !edicion);
     }
 }

@@ -15,6 +15,7 @@ internal sealed class FrmBitacoraCitas : Form
     private readonly Label estado = CampoCitorna.Rotulo("", true);
     private readonly Button actualizar = ControlesRegistro.Boton("Actualizar");
     private IReadOnlyList<EventoBitacoraCita> eventos = [];
+    private PaletaCitorna paleta = PaletaCitorna.Clara;
 
     public FrmBitacoraCitas()
     {
@@ -80,7 +81,16 @@ internal sealed class FrmBitacoraCitas : Form
         };
     }
 
-    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e);
+    internal void AplicarPaleta(PaletaCitorna nueva)
+    {
+        if (paleta == nueva) return;
+        paleta = nueva;
+        BackColor = nueva.Fondo;
+        nueva.AplicarControles(this);
+        Invalidate(true);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e, paleta);
 
     private void MostrarCelda(object? sender, DataGridViewCellValueEventArgs e)
     {

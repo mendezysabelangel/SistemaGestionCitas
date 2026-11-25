@@ -120,5 +120,45 @@ namespace SistemaGestionCitas.src.Forms
             return permisos;
         }
 
+        private sealed class GrupoPermisos : GroupBox, IVistaConPaleta
+        {
+            private PaletaCitorna paleta = PaletaCitorna.Clara;
+
+            public void AplicarPaleta(PaletaCitorna nueva)
+            {
+                paleta = nueva;
+                ForeColor = nueva.Tinta;
+                nueva.AplicarControles(this);
+                Invalidate();
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                if (!paleta.EsOscura || SystemInformation.HighContrast)
+                {
+                    base.OnPaint(e);
+                    return;
+                }
+
+                int margen = LogicalToDeviceUnits(8);
+                int separacion = LogicalToDeviceUnits(3);
+                int y = Font.Height / 2;
+                if (Width <= 2 * margen || Height <= y) return;
+
+                const TextFormatFlags formato = TextFormatFlags.NoPadding | TextFormatFlags.SingleLine;
+                Size titulo = TextRenderer.MeasureText(Text, Font, new Size(int.MaxValue, Font.Height), formato);
+                int ancho = Math.Min(titulo.Width + separacion, Width - 2 * margen);
+                int finTitulo = margen + ancho + separacion;
+                using var borde = new Pen(paleta.Borde);
+                e.Graphics.DrawLines(borde, new[]
+                {
+                    new Point(margen - separacion, y), new Point(0, y), new Point(0, Height - 1),
+                    new Point(Width - 1, Height - 1), new Point(Width - 1, y),
+                    new Point(finTitulo, y)
+                });
+                TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(margen, 0, ancho, Font.Height), ForeColor,
+                    formato | TextFormatFlags.EndEllipsis);
+            }
+        }
     }
 }

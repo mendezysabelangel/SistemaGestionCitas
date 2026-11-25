@@ -37,11 +37,22 @@
                 Grupo("Administración de accesos", chkCrearUsuarios, chkCrearRoles)));
             DialogoCitorna.Configurar(this, "Crear rol", "Define un rol y asigna sus permisos.",
                 new Size(665, 542), contenido, btnCrearRol, cancelar);
+            if (contenido.Parent is ScrollableControl superficie)
+            {
+                // Esperar a que termine la distribución antes de medir los grupos apilados.
+                void AjustarDesplazamiento()
+                {
+                    if (superficie.IsHandleCreated)
+                        superficie.BeginInvoke(() => superficie.AutoScrollMinSize = new Size(0, contenido.Height));
+                }
+                contenido.SizeChanged += (_, _) => AjustarDesplazamiento();
+                Shown += (_, _) => AjustarDesplazamiento();
+            }
         }
 
         private static Control Grupo(string nombre, params CheckBox[] casillas)
         {
-            var grupo = new GroupBox { Text = nombre, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            var grupo = new GrupoPermisos { Text = nombre, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(12, 8, 8, 8), Margin = new Padding(0, 0, 9, 6), ForeColor = EstiloAgenda.Tinta };
             var lista = DialogoCitorna.Tabla();
             foreach (var casilla in casillas) lista.Controls.Add(casilla);

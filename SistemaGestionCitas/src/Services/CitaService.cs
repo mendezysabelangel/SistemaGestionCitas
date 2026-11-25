@@ -117,11 +117,14 @@ public sealed class CitaService
 
     public Task<ResultadoCita> ModificarAsync(int idCita, DatosCita datos, CancellationToken cancelacion = default)
     {
-        if (!PuedeModificar())
+        Usuario? usuario = SesionActual.UsuarioActual;
+        if (usuario == null || !SesionActual.TienePermiso(PermisosSistema.Modificar))
             return Task.FromResult(new ResultadoCita(false, "No tiene permiso para modificar citas."));
         if (idCita <= 0)
             return Task.FromResult(new ResultadoCita(false, "Selecciona una cita válida."));
 
+        int idUsuario = usuario.IdUsuario;
+        string nombreUsuario = usuario.NombreUsuario;
         return repositorio.EnTransaccionAsync(async transaccion =>
         {
             Cita? actual = await repositorio.ConsultarPorIdAsync(idCita, cancelacion, transaccion).ConfigureAwait(false);
@@ -135,6 +138,9 @@ public sealed class CitaService
                 return new(false, validacion.Mensaje);
 
             await repositorio.ActualizarAsync(idCita, datos, fin, transaccion, cancelacion).ConfigureAwait(false);
+            if (!await bitacora.RegistrarAsync(idCita, idUsuario, nombreUsuario, "Cita editada", null, actual.Estado,
+                    transaccion, cancelacion).ConfigureAwait(false))
+                return new(false, BitacoraCitasRepository.MensajeInstalacion);
             return new(true, "Cita modificada correctamente.", idCita);
         }, cancelacion);
     }
@@ -174,13 +180,15 @@ public sealed class CitaService
                 return new(false, $"El estado «{destino}» no está disponible.");
 
             await repositorio.ActualizarEstadoAsync(idCita, idEstado, transaccion, cancelacion).ConfigureAwait(false);
-            string? accion = destino switch
+            string accion = destino switch
             {
                 Confirmada => "Cita confirmada",
                 Cancelada => "Cita cancelada",
-                _ => null
+                Completada => "Cita completada",
+                NoAsistio => "Inasistencia registrada",
+                _ => throw new InvalidOperationException("El destino no corresponde a una transición de Citas.")
             };
-            if (accion != null && !await bitacora.RegistrarAsync(idCita, idUsuario, nombreUsuario, accion, actual.Estado,
+            if (!await bitacora.RegistrarAsync(idCita, idUsuario, nombreUsuario, accion, actual.Estado,
                     destino, transaccion, cancelacion).ConfigureAwait(false))
                 return new(false, BitacoraCitasRepository.MensajeInstalacion);
             return new(true, $"Estado actualizado a «{destino}».", idCita);

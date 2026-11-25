@@ -15,16 +15,27 @@ internal static class CampoCitorna
             texto.BackColor = Color.White;
             if (texto.Multiline) texto.ScrollBars = ScrollBars.Vertical;
         }
-        if (campo is ComboBox combo) combo.FlatStyle = FlatStyle.Flat;
+        VistaSelectorCitorna? vistaSelector = null;
+        if (campo is ComboBox combo)
+        {
+            combo.FlatStyle = FlatStyle.Flat;
+            if (combo.DropDownStyle == ComboBoxStyle.DropDownList) vistaSelector = new VistaSelectorCitorna(combo);
+        }
 
         void Alinear()
         {
             int altura = campo is TextBox { Multiline: true } ? marco.ClientSize.Height - marco.Padding.Vertical : campo.PreferredSize.Height;
             campo.SetBounds(marco.Padding.Left, Math.Max(marco.Padding.Top, (marco.Height - altura) / 2),
                 Math.Max(1, marco.ClientSize.Width - marco.Padding.Horizontal), Math.Max(1, altura));
+            if (vistaSelector != null) vistaSelector.Bounds = campo.Bounds;
         }
 
         marco.Controls.Add(campo);
+        if (vistaSelector != null)
+        {
+            marco.Controls.Add(vistaSelector);
+            vistaSelector.BringToFront();
+        }
         marco.Resize += (_, _) => Alinear();
         campo.FontChanged += (_, _) => Alinear();
         marco.Enter += (_, _) => marco.Invalidate();

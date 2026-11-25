@@ -8,11 +8,15 @@ namespace SistemaGestionCitas.src.Forms;
 internal sealed class FrmCitas : Form
 {
     private static readonly CultureInfo Espanol = CultureInfo.GetCultureInfo("es-DO");
+    private static readonly ToolStripRenderer MenuOscuro = new ToolStripProfessionalRenderer(new ColoresMenuOscuro());
     private readonly CitaService servicio = new();
-    private readonly DateTimePicker fecha = new() { Format = DateTimePickerFormat.Custom, CustomFormat = "dd/MM/yyyy" };
+    private readonly CheckBox modoOscuro = PaletaCitorna.CrearInterruptor();
+    private readonly SelectorFechaCitas selectorFecha = new();
+    private DateTimePicker fecha => selectorFecha.Fecha;
     private readonly ContextMenuStrip estados = new();
     private readonly VistaRegistros<Cita> vista;
     private readonly Action actualizarAgenda;
+    internal event Action<bool>? TemaCambiado;
 
     internal FrmCitas(DateTime fechaInicial, Action actualizarAgenda)
     {
@@ -26,7 +30,8 @@ internal sealed class FrmCitas : Form
         fecha.Value = DentroDelSelector(fechaInicial);
 
         vista = new("Citas", "Consulta y gestión de reservas", "Fecha", "cita",
-            cita => cita.IdCita, campoConsulta: fecha, femenino: true);
+            cita => cita.IdCita, campoConsulta: selectorFecha, femenino: true, accionCabecera: modoOscuro);
+        modoOscuro.CheckedChanged += (_, _) => TemaCambiado?.Invoke(modoOscuro.Checked);
         vista.Tabla.AgregarColumna("Hora", 15, 72);
         vista.Tabla.AgregarColumna("Cliente", 23, 86);
         vista.Tabla.AgregarColumna("Servicio", 22, 82);
@@ -59,6 +64,17 @@ internal sealed class FrmCitas : Form
         };
         Disposed += (_, _) => estados.Dispose();
         ResumeLayout(true);
+    }
+
+    internal void AplicarPaleta(PaletaCitorna paleta)
+    {
+        modoOscuro.Checked = paleta.EsOscura;
+        vista.AplicarPaleta(paleta);
+        selectorFecha.AplicarPaleta(paleta);
+        if (paleta.EsOscura) estados.Renderer = MenuOscuro;
+        else estados.RenderMode = ToolStripRenderMode.ManagerRenderMode;
+        foreach (ToolStripItem item in estados.Items)
+            item.ForeColor = paleta.EsOscura ? paleta.Tinta : Color.Empty;
     }
 
     private DateTime DentroDelSelector(DateTime dia) =>
@@ -147,4 +163,17 @@ internal sealed class FrmCitas : Form
 
     private static bool PuedeAdministrar() => SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar citas")
         && SesionActual.VerificarPermiso(PermisosSistema.Modificar, "administrar citas");
+
+    private sealed class ColoresMenuOscuro : ProfessionalColorTable
+    {
+        private readonly PaletaCitorna paleta = PaletaCitorna.Oscura;
+
+        public override Color ToolStripDropDownBackground => paleta.Superficie;
+        public override Color ImageMarginGradientBegin => paleta.Superficie;
+        public override Color ImageMarginGradientMiddle => paleta.Superficie;
+        public override Color ImageMarginGradientEnd => paleta.Superficie;
+        public override Color MenuItemSelected => paleta.Seleccion;
+        public override Color MenuItemBorder => paleta.Acento;
+        public override Color MenuBorder => paleta.Borde;
+    }
 }

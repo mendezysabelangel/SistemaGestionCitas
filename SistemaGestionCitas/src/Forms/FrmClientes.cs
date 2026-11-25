@@ -21,7 +21,7 @@ namespace SistemaGestionCitas.src.Forms
             vista.Tabla.CellFormatting += (_, e) =>
             {
                 if (e.RowIndex >= 0 && e.ColumnIndex == 2 && vista.Registro(e.RowIndex) is { } c)
-                    e.CellStyle!.ForeColor = c.Activo ? Color.FromArgb(0, 90, 73) : EstiloAgenda.Secundario;
+                    e.CellStyle!.ForeColor = c.Activo ? vista.Paleta.TextoActivo : vista.Paleta.Secundario;
             };
             vista.ValorCelda = (c, indice) => indice switch
             {
@@ -118,6 +118,7 @@ namespace SistemaGestionCitas.src.Forms
                 };
                 return cliente == null ? () => new ClienteService().Registrar(datos) : () => new ClienteService().Modificar(datos);
             };
+            vista.Paleta.AplicarDialogo(editor);
             if (editor.ShowDialog(this) == DialogResult.OK) Consultar(cliente?.IdCliente, cliente == null);
         }
 

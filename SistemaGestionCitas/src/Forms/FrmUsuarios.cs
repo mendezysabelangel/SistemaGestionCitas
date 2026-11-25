@@ -43,9 +43,9 @@ public class FrmUsuarios : Form
         {
             if (vista.Registro(e.RowIndex) is not { } usuario) return;
             if (e.ColumnIndex == 3)
-                e.CellStyle!.ForeColor = usuario.Activo ? Color.FromArgb(0, 90, 73) : ControlesRegistro.Peligro;
+                e.CellStyle!.ForeColor = usuario.Activo ? vista.Paleta.TextoActivo : vista.Paleta.Error;
             else if (e.ColumnIndex == 4 && usuario.EstaBloqueado(DateTime.Now))
-                e.CellStyle!.ForeColor = ControlesRegistro.Peligro;
+                e.CellStyle!.ForeColor = vista.Paleta.Error;
         };
         vista.ValorCelda = (usuario, columna) => columna switch
         {
@@ -183,6 +183,7 @@ public class FrmUsuarios : Form
     {
         if (!SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "crear usuarios")) return;
         using var formulario = new CrearUsuario();
+        vista.Paleta.AplicarDialogo(formulario);
         if (formulario.ShowDialog(this) == DialogResult.OK) Consultar(renovar: true, sinSeleccion: true);
     }
 
@@ -210,6 +211,7 @@ public class FrmUsuarios : Form
             bool estado = propia ? usuario.Activo : activo.Checked;
             return () => new UsuarioService().ModificarUsuario(usuario.IdUsuario, nombrePuesto, cuentaPuesta, correoPuesto, rol, estado);
         };
+        vista.Paleta.AplicarDialogo(editor);
         if (editor.ShowDialog(this) != DialogResult.OK) return;
         if (MdiParent is FrmDashboard dashboard) dashboard.ActualizarDatosSesion();
         Consultar(renovar: true, seleccionarId: usuario.IdUsuario);

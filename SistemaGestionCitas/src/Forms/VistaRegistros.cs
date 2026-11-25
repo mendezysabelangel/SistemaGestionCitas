@@ -72,7 +72,7 @@ internal sealed class RejillaRegistros : DataGridView
     });
 }
 
-internal sealed class VistaRegistros<T> : UserControl where T : class
+internal sealed class VistaRegistros<T> : UserControl, IVistaConPaleta where T : class
 {
     private readonly TableLayoutPanel pagina = new();
     private readonly TableLayoutPanel cuerpo = new();
@@ -111,6 +111,8 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     private bool consultando;
     private bool datosVigentes;
     private bool? compacto;
+    private PaletaCitorna paleta = PaletaCitorna.Clara;
+    internal PaletaCitorna Paleta => paleta;
     private Solicitud? pendiente;
 
     private sealed record Solicitud(Func<Task<(List<T> Datos, Action? AlAplicar)>> Buscar, bool Filtrada, int? Id, bool ConservarSeleccion);
@@ -129,7 +131,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     internal VistaRegistros(string titulo, string subtitulo, string buscar, string singular, Func<T, int> idDe,
         string? accionExtra = null, string permisoConsulta = PermisosSistema.Consultar,
         string permisoNuevo = PermisosSistema.Agregar, string? etiquetaConsulta = null,
-        Control? campoConsulta = null, bool femenino = false)
+        Control? campoConsulta = null, bool femenino = false, Control? accionCabecera = null)
     {
         this.idDe = idDe;
         this.singular = singular;
@@ -146,6 +148,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         Font = fuenteBase;
         BackColor = EstiloAgenda.Fondo;
         nuevo = ControlesRegistro.Boton($"{(femenino ? "Nueva" : "Nuevo")} {singular}", ControlesRegistro.Primario, Color.White);
+        if (accionCabecera != null) Disposed += (_, _) => nuevo.Dispose();
         AccionExtra = accionExtra == null ? null : ControlesRegistro.Boton(accionExtra);
         nuevo.Click += (_, _) => Nuevo?.Invoke();
         editar.Click += (_, _) => { if (Seleccion is { } fila) Editar?.Invoke(fila); };
@@ -163,7 +166,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         pagina.RowStyles.Add(new RowStyle(SizeType.Absolute, 49));
         pagina.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         pagina.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        pagina.Controls.Add(ConstruirCabecera(titulo, subtitulo), 0, 0);
+        pagina.Controls.Add(ConstruirCabecera(titulo, subtitulo, accionCabecera ?? nuevo), 0, 0);
         pagina.Controls.Add(campoConsulta == null ? ConstruirBusqueda(buscar, etiquetaConsulta ?? "Consultar")
             : ConstruirConsultaPorCampo(buscar, campoConsulta), 0, 1);
 
@@ -187,7 +190,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         ResumeLayout(true);
     }
 
-    private Control ConstruirCabecera(string titulo, string subtitulo)
+    private Control ConstruirCabecera(string titulo, string subtitulo, Control accion)
     {
         var rejilla = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Margin = Padding.Empty };
         rejilla.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -201,9 +204,9 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         secundario.Dock = DockStyle.Fill;
         rejilla.Controls.Add(principal, 0, 0);
         rejilla.Controls.Add(secundario, 0, 1);
-        rejilla.Controls.Add(nuevo, 1, 0);
-        rejilla.SetRowSpan(nuevo, 2);
-        nuevo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        rejilla.Controls.Add(accion, 1, 0);
+        rejilla.SetRowSpan(accion, 2);
+        if (accion == nuevo) nuevo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         return rejilla;
     }
 
@@ -227,7 +230,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
             int x = caja.LogicalToDeviceUnits(12);
             int y = (caja.Height - lado) / 2 - 1;
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            using Pen trazo = new(EstiloAgenda.Secundario, caja.LogicalToDeviceUnits(2));
+            using Pen trazo = new(paleta.Secundario, caja.LogicalToDeviceUnits(2));
             e.Graphics.DrawEllipse(trazo, x, y, lado, lado);
             e.Graphics.DrawLine(trazo, x + lado - 2, y + lado - 2, x + lado + 3, y + lado + 3);
         };
@@ -409,7 +412,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
 
     private Label Rotulo(string texto, Font? fuente = null)
     {
-        var etiqueta = new Label { Text = texto, ForeColor = EstiloAgenda.Tinta, AutoSize = true, Margin = Padding.Empty };
+        var etiqueta = new Label { Text = texto, ForeColor = paleta.Tinta, AutoSize = true, Margin = Padding.Empty };
         if (fuente != null) etiqueta.Font = fuente;
         return etiqueta;
     }
@@ -426,7 +429,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
             Label etiqueta = Rotulo(nombre, fuenteEtiqueta);
             etiqueta.Margin = new Padding(0, 7, 0, 1);
             Label dato = Rotulo(valor);
-            dato.ForeColor = EstiloAgenda.Secundario;
+            dato.ForeColor = paleta.Secundario;
             dato.Margin = new Padding(0, 0, 0, 6);
             AgregarDato(etiqueta);
             AgregarDato(dato);
@@ -523,7 +526,18 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         }
     }
 
-    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e);
+    internal void AplicarPaleta(PaletaCitorna nueva)
+    {
+        if (paleta == nueva) return;
+        paleta = nueva;
+        BackColor = nueva.Fondo;
+        nueva.AplicarControles(this);
+        Invalidate(true);
+    }
+
+    void IVistaConPaleta.AplicarPaleta(PaletaCitorna nueva) => AplicarPaleta(nueva);
+
+    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e, paleta);
 
     protected override void OnResize(EventArgs e)
     {

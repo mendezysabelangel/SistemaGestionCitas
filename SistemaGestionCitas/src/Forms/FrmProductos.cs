@@ -154,12 +154,14 @@ namespace SistemaGestionCitas.src.Forms
         {
             if (e.RowIndex < 0 || vista.Registro(e.RowIndex) is not { } p || e.Graphics is not { } g) return;
             bool seleccionado = (e.State & DataGridViewElementStates.Selected) != 0;
+            PaletaCitorna paleta = vista.Paleta;
+            Color fondoIcono = paleta.EsOscura ? paleta.Encabezado : FondoIcono;
             var textoFlags = TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter;
             Rectangle bordes = e.CellBounds;
             GraphicsState estadoDibujo = g.Save();
             g.SetClip(Rectangle.Intersect(bordes, e.ClipBounds));
-            using SolidBrush fondoFila = new(seleccionado ? EstiloAgenda.Seleccion : Color.White);
-            using Pen separador = new(EstiloAgenda.Borde);
+            using SolidBrush fondoFila = new(seleccionado ? paleta.Seleccion : paleta.Superficie);
+            using Pen separador = new(paleta.Borde);
             g.FillRectangle(fondoFila, bordes);
             int margen = vista.LogicalToDeviceUnits(8);
             if (e.ColumnIndex == 0)
@@ -167,29 +169,32 @@ namespace SistemaGestionCitas.src.Forms
                 int lado = vista.LogicalToDeviceUnits(40);
                 var icono = new Rectangle(bordes.X + margen, bordes.Y + (bordes.Height - lado) / 2, lado, lado);
                 using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(icono, vista.LogicalToDeviceUnits(8));
-                using SolidBrush fondo = new(FondoIcono);
+                using SolidBrush fondo = new(fondoIcono);
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.FillPath(fondo, forma);
                 int dibujo = vista.LogicalToDeviceUnits(22);
-                IconosAgenda.Dibujar(g, SimboloAgenda.Productos, EstiloAgenda.Tinta,
+                IconosAgenda.Dibujar(g, SimboloAgenda.Productos, paleta.Tinta,
                     new(icono.X + (lado - dibujo) / 2, icono.Y + (lado - dibujo) / 2, dibujo, dibujo));
                 int x = icono.Right + margen;
                 int altoLinea = Math.Max(nombreProducto.Height, vista.Font.Height);
                 int y = bordes.Y + (bordes.Height - 2 * altoLinea) / 2;
                 var superior = new Rectangle(x, y, Math.Max(1, bordes.Right - x - margen), altoLinea);
                 var inferior = new Rectangle(superior.X, superior.Bottom, superior.Width, altoLinea);
-                TextRenderer.DrawText(g, p.Nombre, nombreProducto, superior, EstiloAgenda.Tinta, textoFlags);
-                TextRenderer.DrawText(g, p.Categoria, vista.Font, inferior, EstiloAgenda.Secundario, textoFlags);
+                TextRenderer.DrawText(g, p.Nombre, nombreProducto, superior, paleta.Tinta, textoFlags);
+                TextRenderer.DrawText(g, p.Categoria, vista.Font, inferior, paleta.Secundario, textoFlags);
             }
             else if (e.ColumnIndex == 3)
             {
                 string estado = EstadoInventario(p);
-                (Color color, Color tinta) = estado switch
+                (Color color, Color tinta) = (estado, paleta.EsOscura) switch
                 {
-                    "Agotado" => (Color.FromArgb(252, 229, 232), Color.FromArgb(136, 43, 57)),
-                    "Stock bajo" => (Color.FromArgb(253, 239, 211), Color.FromArgb(111, 68, 17)),
-                    "Disponible" => (Color.FromArgb(221, 242, 234), Color.FromArgb(0, 82, 67)),
-                    _ => (FondoIcono, EstiloAgenda.Secundario)
+                    ("Agotado", true) => (Color.FromArgb(67, 40, 52), paleta.Error),
+                    ("Stock bajo", true) => (Color.FromArgb(71, 55, 29), Color.FromArgb(244, 213, 146)),
+                    ("Disponible", true) => (Color.FromArgb(32, 60, 54), paleta.TextoActivo),
+                    ("Agotado", false) => (Color.FromArgb(252, 229, 232), Color.FromArgb(136, 43, 57)),
+                    ("Stock bajo", false) => (Color.FromArgb(253, 239, 211), Color.FromArgb(111, 68, 17)),
+                    ("Disponible", false) => (Color.FromArgb(221, 242, 234), Color.FromArgb(0, 82, 67)),
+                    _ => (fondoIcono, paleta.Secundario)
                 };
                 int alto = vista.LogicalToDeviceUnits(26);
                 int ancho = Math.Max(1, Math.Min(bordes.Width - margen, TextRenderer.MeasureText(estado, vista.Font).Width + margen));
@@ -202,13 +207,13 @@ namespace SistemaGestionCitas.src.Forms
             }
             else
             {
-                TextRenderer.DrawText(g, e.FormattedValue?.ToString() ?? "", vista.Font, bordes, EstiloAgenda.Tinta,
+                TextRenderer.DrawText(g, e.FormattedValue?.ToString() ?? "", vista.Font, bordes, paleta.Tinta,
                     textoFlags | TextFormatFlags.HorizontalCenter);
             }
             g.SmoothingMode = SmoothingMode.None;
             g.DrawLine(separador, bordes.Left, bordes.Bottom - 1, bordes.Right, bordes.Bottom - 1);
             if (seleccionado && vista.Tabla.Focused && vista.Tabla.CurrentCellAddress == new Point(e.ColumnIndex, e.RowIndex))
-                ControlPaint.DrawFocusRectangle(g, Rectangle.Inflate(bordes, -2, -2), EstiloAgenda.Tinta, EstiloAgenda.Seleccion);
+                ControlPaint.DrawFocusRectangle(g, Rectangle.Inflate(bordes, -2, -2), paleta.Tinta, paleta.Seleccion);
             g.Restore(estadoDibujo);
             e.Handled = true;
         }
@@ -263,6 +268,7 @@ namespace SistemaGestionCitas.src.Forms
                 };
                 return producto == null ? () => new ProductoService().Registrar(datos) : () => new ProductoService().Modificar(datos);
             };
+            vista.Paleta.AplicarDialogo(editor);
             if (editor.ShowDialog(this) == DialogResult.OK) Consultar(producto?.IdProducto, producto == null);
         }
 
