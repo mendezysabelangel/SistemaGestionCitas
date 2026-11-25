@@ -53,6 +53,7 @@ namespace SistemaGestionCitas.src.Forms
                 return;
             }
 
+            btnCrearRol.Enabled = false;
             try
             {
                 // Verificar si ya existe
@@ -88,6 +89,10 @@ namespace SistemaGestionCitas.src.Forms
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
+            finally
+            {
+                btnCrearRol.Enabled = true;
+            }
         }
 
         private List<string> ObtenerPermisosSeleccionados()
@@ -115,9 +120,5 @@ namespace SistemaGestionCitas.src.Forms
             return permisos;
         }
 
-        private void btnCancelar_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
     }
 }

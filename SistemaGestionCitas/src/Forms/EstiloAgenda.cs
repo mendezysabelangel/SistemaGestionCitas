@@ -1,4 +1,4 @@
-using System.Drawing.Drawing2D;
+﻿using System.Drawing.Drawing2D;
 
 namespace SistemaGestionCitas.src.Forms;
 
@@ -28,6 +28,8 @@ internal static class EstiloAgenda
 
 internal sealed class TarjetaAgenda : Panel
 {
+    internal int Radio { get; init; } = 15;
+    internal bool ResaltarFoco { get; init; }
     public TarjetaAgenda()
     {
         DoubleBuffered = true;
@@ -37,12 +39,23 @@ internal sealed class TarjetaAgenda : Panel
 
     protected override void OnPaintBackground(PaintEventArgs e)
     {
+        int radio = LogicalToDeviceUnits(Radio);
+        // Un hijo que sólo cubre el interior blanco no necesita volver a pintar la imagen de fondo.
+        if (Width > 2 * radio + 4 && Height > 2 * radio + 4
+            && (new Rectangle(radio + 2, 3, Width - 2 * radio - 4, Height - 6).Contains(e.ClipRectangle)
+                || new Rectangle(3, radio + 2, Width - 6, Height - 2 * radio - 4).Contains(e.ClipRectangle)))
+        {
+            e.Graphics.FillRectangle(Brushes.White, e.ClipRectangle);
+            return;
+        }
+
         base.OnPaintBackground(e);
         if (Width < 3 || Height < 3) return;
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(new RectangleF(1, 1, Width - 3, Height - 3),
-            LogicalToDeviceUnits(15));
-        using Pen borde = new(EstiloAgenda.Borde);
+        using GraphicsPath forma = EstiloAgenda.RectanguloRedondo(new RectangleF(1, 1, Width - 3, Height - 3), radio);
+        bool enfocada = ResaltarFoco && ContainsFocus;
+        using Pen borde = new(enfocada ? EstiloAgenda.Azul : EstiloAgenda.Borde,
+            enfocada ? LogicalToDeviceUnits(2) : 1);
         e.Graphics.FillPath(Brushes.White, forma);
         e.Graphics.DrawPath(borde, forma);
     }

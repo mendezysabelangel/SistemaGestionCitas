@@ -117,6 +117,19 @@ namespace SistemaGestionCitas.src.Services
             return Ok("Contraseña actualizada correctamente.");
         }
 
+        public ResultadoOperacion DesbloquearUsuario(int idUsuario)
+        {
+            if (!PuedeAdministrar(PermisosSistema.Modificar))
+                return Error("Permisos insuficientes para desbloquear usuarios.");
+            if (idUsuario <= 0)
+                return Error("Seleccione un usuario para desbloquear.");
+
+            if (!repositorio.Desbloquear(idUsuario))
+                return Error("El usuario ya no está bloqueado o ya no existe.");
+
+            return Ok("Se quitó el bloqueo temporal y se reiniciaron los intentos fallidos.");
+        }
+
         public ResultadoOperacion EliminarUsuario(int idUsuario)
         {
             if (!PuedeAdministrar(PermisosSistema.Eliminar))

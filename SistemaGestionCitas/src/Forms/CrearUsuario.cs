@@ -19,7 +19,16 @@ namespace SistemaGestionCitas.src.Forms
             txtPassword.MaxLength = 100;
             txtConfirmarPassword.MaxLength = 100;
 
-            CargarRoles();
+            Shown += (_, _) =>
+            {
+                if (!SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "crear usuarios"))
+                {
+                    Close();
+                    return;
+                }
+
+                CargarRoles();
+            };
         }
 
         private void CargarRoles()
@@ -41,13 +50,9 @@ namespace SistemaGestionCitas.src.Forms
             }
         }
 
-        private void btnCancelar_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
-
         private void btnCrearUsuario_Click(object sender, EventArgs e)
         {
+            if (!SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "crear usuarios")) return;
             string nombreCompleto = txtNombreCompleto.Text.Trim();
             string nombreUsuario = txtNombreUsuario.Text.Trim();
             string correo = txtCorreo.Text.Trim();
@@ -210,26 +215,6 @@ namespace SistemaGestionCitas.src.Forms
 
             DialogResult = DialogResult.OK;
             Close();
-        }
-
-        private void txtNombreCompleto_TextChanged(object sender, EventArgs e)
-        {
-        }
-
-        private void txtNombreUsuario_TextChanged(object sender, EventArgs e)
-        {
-        }
-
-        private void txtCorreo_TextChanged(object sender, EventArgs e)
-        {
-        }
-
-        private void txtPassword_TextChanged(object sender, EventArgs e)
-        {
-        }
-
-        private void txtConfirmarPassword_TextChanged(object sender, EventArgs e)
-        {
         }
     }
 }

@@ -30,6 +30,7 @@ namespace SistemaGestionCitas.src.Forms
         private BotonMenu? botonModal;
         private string seccionModal = "";
         private bool contraido;
+        private bool modoAplicadoContraido;
         private bool iniciado;
         private int anchoInicial;
 
@@ -120,12 +121,12 @@ namespace SistemaGestionCitas.src.Forms
                 navegacion.Controls.Add(boton);
             }
             btnInicio.Click += (_, _) => VolverAInicio();
-            btnClientes.Click += (_, _) => AbrirConsulta(() => new FrmClientes(), "Clientes");
-            btnProductos.Click += (_, _) => AbrirConsulta(() => new FrmProductos(), "Productos");
+            btnClientes.Click += (_, _) => AbrirConsulta<FrmClientes>("Clientes");
+            btnProductos.Click += (_, _) => AbrirConsulta<FrmProductos>("Productos");
             btnUsuario.Click += (_, _) =>
             {
                 if (SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "consultar usuarios"))
-                    AbrirHijo(new FrmUsuarios(), "Usuarios");
+                    AbrirModulo<FrmUsuarios>("Usuarios");
             };
             btnCrearUsuario.Click += (_, _) =>
             {
@@ -175,6 +176,8 @@ namespace SistemaGestionCitas.src.Forms
 
         private void AplicarModoMenu()
         {
+            if (modoAplicadoContraido == contraido) return;
+            modoAplicadoContraido = contraido;
             marca.Image = contraido ? logoIcono : logoLargo;
             int margen = LogicalToDeviceUnits(contraido ? 1 : 12);
             marca.Margin = new Padding(margen, LogicalToDeviceUnits(2), margen, LogicalToDeviceUnits(5));
@@ -190,12 +193,14 @@ namespace SistemaGestionCitas.src.Forms
         private void SeleccionarMenu(BotonMenu seleccionado, bool animar = true)
         {
             if (botonActivo == seleccionado) return;
-            botonActivo = seleccionado;
-            foreach (BotonMenu boton in botones)
+            if (botonActivo != null)
             {
-                boton.Font = boton == seleccionado ? fuenteActiva : fuente;
-                boton.AccessibleDescription = boton == seleccionado ? "Sección actual" : null;
+                botonActivo.Font = fuente;
+                botonActivo.AccessibleDescription = null;
             }
+            botonActivo = seleccionado;
+            seleccionado.Font = fuenteActiva;
+            seleccionado.AccessibleDescription = "Sección actual";
             IniciarAnimacion(animar);
         }
 
@@ -251,10 +256,16 @@ namespace SistemaGestionCitas.src.Forms
             if (iniciado) agenda.ActualizarPermiso();
         }
 
-        private void AbrirConsulta(Func<Form> crear, string seccion)
+        private void AbrirConsulta<T>(string seccion) where T : Form, new()
         {
             if (SesionActual.VerificarPermiso(PermisosSistema.Consultar, "consultar información"))
-                AbrirHijo(crear(), seccion);
+                AbrirModulo<T>(seccion);
+        }
+
+        private void AbrirModulo<T>(string seccion) where T : Form, new()
+        {
+            // Consultar las ventanas abiertas antes de construir controles para otra instancia.
+            if (!ActivarHijoAbierto(typeof(T))) MostrarHijo(new T(), seccion);
         }
 
         private void AbrirDialogo(Form formulario, BotonMenu boton)
@@ -298,23 +309,29 @@ namespace SistemaGestionCitas.src.Forms
             }));
         }
 
+        private bool ActivarHijoAbierto(Type tipo)
+        {
+            Form? abierto = MdiChildren.FirstOrDefault(hijo => hijo.GetType() == tipo && !hijo.IsDisposed);
+            if (abierto == null) return false;
+            if (abierto.WindowState == FormWindowState.Minimized) abierto.WindowState = FormWindowState.Normal;
+            if (ActiveMdiChild != abierto) abierto.Activate();
+            return true;
+        }
+
         public void AbrirHijo(Form hijo, string seccion, bool permitirDuplicados = false)
         {
-            if (!permitirDuplicados)
+            if (!permitirDuplicados && ActivarHijoAbierto(hijo.GetType()))
             {
-                foreach (Form abierto in MdiChildren)
-                {
-                    if (abierto.GetType() != hijo.GetType()) continue;
-                    if (abierto.WindowState == FormWindowState.Minimized) abierto.WindowState = FormWindowState.Normal;
-                    abierto.Activate();
-                    hijo.Dispose();
-                    ActualizarNavegacion();
-                    return;
-                }
+                hijo.Dispose();
+                return;
             }
 
-            pnlContenido.Visible = false;
-            PerformLayout();
+            MostrarHijo(hijo, seccion);
+        }
+
+        private void MostrarHijo(Form hijo, string seccion)
+        {
+            if (pnlContenido.Visible) pnlContenido.Hide();
             seccionesHijas[hijo] = seccion;
             hijo.FormClosed += (_, _) =>
             {

@@ -18,7 +18,6 @@ namespace SistemaGestionCitas.src.Forms
         private List<Cliente> datosMostrados = new List<Cliente>();
 
         private readonly Color azul = Color.FromArgb(27, 68, 170);
-        private readonly Color fondoClaro = Color.FromArgb(247, 248, 252);
         private readonly string usuario = SesionActual.UsuarioActual?.NombreCompleto ?? "-";
 
         // Columnas del reporte (se usan en pantalla, impresión, Excel y CSV)
@@ -53,101 +52,92 @@ namespace SistemaGestionCitas.src.Forms
         // =====================================================
         private void ConstruirInterfaz()
         {
+            SuspendLayout();
             Text = "Reporte de clientes";
-            Font = new Font("Segoe UI", 10F);
-            BackColor = fondoClaro;
+            var fuente = new Font("Segoe UI", 10.5F);
+            var tituloFuente = new Font("Segoe UI", 18F, FontStyle.Bold);
+            Font = fuente;
+            Disposed += (_, _) => { tituloFuente.Dispose(); fuente.Dispose(); };
+            BackColor = EstiloAgenda.Barra;
             ClientSize = new Size(1050, 640);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScaleDimensions = new SizeF(96F, 96F);
 
-            // ---------- Encabezado del reporte ----------
-            Panel pnlTitulo = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.White };
-            pnlTitulo.Controls.Add(new Label
-            {
-                Text = "Reporte de Clientes",
-                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
-                ForeColor = azul,
-                Location = new Point(20, 8),
-                AutoSize = true
-            });
-            pnlTitulo.Controls.Add(new Label
-            {
-                Text = filtroInicial.Descripcion(),
-                ForeColor = Color.DimGray,
-                Location = new Point(22, 52),
-                AutoSize = true
-            });
-            pnlTitulo.Controls.Add(new Label
-            {
-                Text = "Generado: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm") + "  ·  Usuario: " + usuario,
-                ForeColor = Color.DimGray,
-                Location = new Point(22, 74),
-                AutoSize = true
-            });
+            var superficie = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(14),
+                ColumnCount = 1, RowCount = 5 };
+            superficie.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            superficie.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            superficie.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            superficie.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            superficie.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            superficie.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            // ---------- Buscadores y filtros dinámicos ----------
-            GroupBox grpBusqueda = new GroupBox
-            {
-                Text = "Buscar y filtrar dentro del reporte",
-                Dock = DockStyle.Top,
-                Height = 78
-            };
+            var encabezado = DialogoCitorna.Tabla();
+            Label titulo = CampoCitorna.Rotulo("Reporte de clientes");
+            titulo.Font = tituloFuente;
+            encabezado.Controls.Add(titulo);
+            encabezado.Controls.Add(CampoCitorna.Rotulo(filtroInicial.Descripcion(), true));
+            encabezado.Controls.Add(CampoCitorna.Rotulo("Generado: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                + "  ·  Usuario: " + usuario, true));
+            superficie.Controls.Add(encabezado, 0, 0);
 
-            grpBusqueda.Controls.Add(CrearLabel("ID:", 15, 32, 30));
-            txtBuscarId.Location = new Point(50, 29);
-            txtBuscarId.Width = 90;
             txtBuscarId.MaxLength = 9;
             txtBuscarId.KeyPress += TxtBuscarId_KeyPress;
-            txtBuscarId.TextChanged += (s, e) => AplicarFiltros();   // filtra mientras escribe
-            grpBusqueda.Controls.Add(txtBuscarId);
-
-            grpBusqueda.Controls.Add(CrearLabel("Nombre:", 160, 32, 65));
-            txtBuscarNombre.Location = new Point(228, 29);
-            txtBuscarNombre.Width = 200;
-            txtBuscarNombre.TextChanged += (s, e) => AplicarFiltros();
-            grpBusqueda.Controls.Add(txtBuscarNombre);
-
-            grpBusqueda.Controls.Add(CrearLabel("Estado:", 450, 32, 60));
-            cmbEstado.DropDownStyle = ComboBoxStyle.DropDownList;
+            txtBuscarId.TextChanged += (_, _) => AplicarFiltros();
+            txtBuscarNombre.TextChanged += (_, _) => AplicarFiltros();
+            cmbEstado.DropDownStyle = cmbContacto.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbEstado.Items.AddRange(new object[] { "Todos", "Activo", "Inactivo" });
-            cmbEstado.SelectedIndex = 0;
-            cmbEstado.Location = new Point(515, 29);
-            cmbEstado.Width = 120;
-            cmbEstado.SelectedIndexChanged += (s, e) => AplicarFiltros();
-            grpBusqueda.Controls.Add(cmbEstado);
-
-            grpBusqueda.Controls.Add(CrearLabel("Contacto:", 655, 32, 75));
-            cmbContacto.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbContacto.Items.AddRange(new object[] { "Todos", "Con correo", "Sin correo" });
-            cmbContacto.SelectedIndex = 0;
-            cmbContacto.Location = new Point(735, 29);
-            cmbContacto.Width = 140;
-            cmbContacto.SelectedIndexChanged += (s, e) => AplicarFiltros();
-            grpBusqueda.Controls.Add(cmbContacto);
+            cmbEstado.SelectedIndex = cmbContacto.SelectedIndex = 0;
+            cmbEstado.SelectedIndexChanged += (_, _) => AplicarFiltros();
+            cmbContacto.SelectedIndexChanged += (_, _) => AplicarFiltros();
+            var filtros = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(0, 8, 0, 7) };
+            filtros.Controls.Add(CampoFiltro("ID", txtBuscarId, 88));
+            filtros.Controls.Add(CampoFiltro("Nombre", txtBuscarNombre, 190));
+            filtros.Controls.Add(CampoFiltro("Estado", cmbEstado, 115));
+            filtros.Controls.Add(CampoFiltro("Contacto", cmbContacto, 130));
+            var limpiar = Accion("Limpiar", BtnLimpiar_Click);
+            limpiar.Margin = new Padding(3, 20, 3, 0);
+            filtros.Controls.Add(limpiar);
+            superficie.Controls.Add(filtros, 0, 1);
 
-            grpBusqueda.Controls.Add(ConfigurarBoton(new Button(), "Limpiar", 895, 26, 100, Color.White, Color.Black, BtnLimpiar_Click));
-
-            // ---------- Pie con total y botones ----------
-            Panel pnlPie = new Panel { Dock = DockStyle.Bottom, Height = 65, BackColor = Color.White };
-
-            lblTotal.Location = new Point(15, 22);
-            lblTotal.AutoSize = true;
-            lblTotal.Text = "Total de registros: 0";
-            pnlPie.Controls.Add(lblTotal);
-
-            pnlPie.Controls.Add(ConfigurarBoton(new Button(), "Vista previa", 250, 14, 120, Color.White, azul, BtnVistaPrevia_Click));
-            pnlPie.Controls.Add(ConfigurarBoton(new Button(), "Imprimir", 380, 14, 120, azul, Color.White, BtnImprimir_Click));
-            pnlPie.Controls.Add(ConfigurarBoton(new Button(), "Exportar PDF", 510, 14, 120, Color.White, azul, BtnExportarPdf_Click));
-            pnlPie.Controls.Add(ConfigurarBoton(new Button(), "Exportar Excel", 640, 14, 130, Color.White, azul, BtnExportarExcel_Click));
-            pnlPie.Controls.Add(ConfigurarBoton(new Button(), "Exportar CSV", 780, 14, 120, Color.White, azul, BtnExportarCsv_Click));
-            pnlPie.Controls.Add(ConfigurarBoton(new Button(), "Cerrar", 910, 14, 100, Color.White, Color.Black, (s, e) => Close()));
-
-            // ---------- Tabla ----------
             ConfigurarTabla();
+            superficie.Controls.Add(dgvReporte, 0, 2);
+            lblTotal.Margin = new Padding(3, 4, 0, 5);
+            lblTotal.AutoSize = true;
+            lblTotal.ForeColor = EstiloAgenda.Secundario;
+            lblTotal.Text = "Total de registros: 0";
+            superficie.Controls.Add(lblTotal, 0, 3);
 
-            Controls.Add(dgvReporte);
-            Controls.Add(pnlPie);
-            Controls.Add(grpBusqueda);
-            Controls.Add(pnlTitulo);
-            dgvReporte.BringToFront();
+            var acciones = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Margin = Padding.Empty };
+            acciones.Controls.Add(Accion("Vista previa", BtnVistaPrevia_Click));
+            acciones.Controls.Add(Accion("Imprimir", BtnImprimir_Click, true));
+            acciones.Controls.Add(Accion("Exportar PDF", BtnExportarPdf_Click));
+            acciones.Controls.Add(Accion("Exportar Excel", BtnExportarExcel_Click));
+            acciones.Controls.Add(Accion("Exportar CSV", BtnExportarCsv_Click));
+            acciones.Controls.Add(Accion("Cerrar", (_, _) => Close()));
+            superficie.Controls.Add(acciones, 0, 4);
+            Controls.Add(superficie);
+            ResumeLayout(true);
+        }
+
+        private static Control CampoFiltro(string nombre, Control campo, int ancho)
+        {
+            var celda = new TableLayoutPanel { Width = ancho, Height = 59, ColumnCount = 1, RowCount = 2 };
+            celda.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            celda.RowStyles.Add(new RowStyle(SizeType.Absolute, 21));
+            celda.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            celda.Controls.Add(CampoCitorna.Rotulo(nombre), 0, 0);
+            celda.Controls.Add(CampoCitorna.Enmarcar(campo, nombre), 0, 1);
+            return celda;
+        }
+
+        private static Button Accion(string texto, EventHandler alHacerClic, bool primaria = false)
+        {
+            Button boton = primaria ? ControlesRegistro.Boton(texto, ControlesRegistro.Primario, Color.White)
+                : ControlesRegistro.Boton(texto);
+            boton.Click += alHacerClic;
+            return boton;
         }
 
         private void ConfigurarTabla()
@@ -162,8 +152,12 @@ namespace SistemaGestionCitas.src.Forms
             dgvReporte.BackgroundColor = Color.White;
             dgvReporte.RowHeadersVisible = false;
             dgvReporte.EnableHeadersVisualStyles = false;
-            dgvReporte.ColumnHeadersDefaultCellStyle.BackColor = azul;
-            dgvReporte.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvReporte.BorderStyle = BorderStyle.None;
+            dgvReporte.GridColor = EstiloAgenda.Borde;
+            dgvReporte.ColumnHeadersDefaultCellStyle.BackColor = EstiloAgenda.Fondo;
+            dgvReporte.ColumnHeadersDefaultCellStyle.ForeColor = EstiloAgenda.Tinta;
+            dgvReporte.DefaultCellStyle.SelectionBackColor = EstiloAgenda.Seleccion;
+            dgvReporte.DefaultCellStyle.SelectionForeColor = EstiloAgenda.Tinta;
             dgvReporte.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 244, 252);
 
             AgregarColumna("IdCliente", encabezados[0], 5);
@@ -188,32 +182,6 @@ namespace SistemaGestionCitas.src.Forms
 
             if (formato != null) col.DefaultCellStyle.Format = formato;
             dgvReporte.Columns.Add(col);
-        }
-
-        private Label CrearLabel(string texto, int x, int y, int ancho)
-        {
-            return new Label
-            {
-                Text = texto,
-                Location = new Point(x, y),
-                Size = new Size(ancho, 24),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-        }
-
-        private Button ConfigurarBoton(Button boton, string texto, int x, int y, int ancho,
-                                       Color fondo, Color letra, EventHandler alHacerClic)
-        {
-            boton.Text = texto;
-            boton.Location = new Point(x, y);
-            boton.Size = new Size(ancho, 34);
-            boton.BackColor = fondo;
-            boton.ForeColor = letra;
-            boton.FlatStyle = FlatStyle.Flat;
-            boton.FlatAppearance.BorderColor = fondo == Color.White ? Color.Silver : fondo;
-            boton.Cursor = Cursors.Hand;
-            boton.Click += alHacerClic;
-            return boton;
         }
 
         // =====================================================

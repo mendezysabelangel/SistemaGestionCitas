@@ -1,4 +1,4 @@
-using SistemaGestionCitas.src.Services;
+﻿using SistemaGestionCitas.src.Services;
 using SistemaGestionCitas.src.Models;
 
 namespace SistemaGestionCitas.src.Forms
@@ -13,59 +13,15 @@ namespace SistemaGestionCitas.src.Forms
         public FrmCambiarPasswordUsuario(int idUsuario, string nombreUsuario)
         {
             this.idUsuario = idUsuario;
-            Text = "Cambiar contraseña";
-            Font = new Font("Segoe UI", 10F);
-            ClientSize = new Size(480, 290);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            StartPosition = FormStartPosition.CenterParent;
-
-            Controls.Add(new Label
-            {
-                Text = "Usuario: " + nombreUsuario, Location = new Point(20, 15),
-                Size = new Size(440, 42), AutoEllipsis = true
-            });
-            Controls.Add(new Label
-            {
-                Text = "Nueva contraseña:", Location = new Point(20, 65), AutoSize = true
-            });
-            txtPassword.Location = new Point(20, 95);
-            txtPassword.Width = 440;
-            txtPassword.MaxLength = 100;
-            txtPassword.UseSystemPasswordChar = true;
-            Controls.Add(txtPassword);
-            Controls.Add(new Label
-            {
-                Text = "Confirmar contraseña:", Location = new Point(20, 140), AutoSize = true
-            });
-            txtConfirmarPassword.Location = new Point(20, 170);
-            txtConfirmarPassword.Width = 440;
-            txtConfirmarPassword.MaxLength = 100;
-            txtConfirmarPassword.UseSystemPasswordChar = true;
-            Controls.Add(txtConfirmarPassword);
-            Controls.Add(new Label
-            {
-                Text = "Entre 6 y 100 caracteres.", Location = new Point(20, 205),
-                AutoSize = true, ForeColor = Color.DimGray
-            });
-
-            Button guardar = new Button
-            {
-                Text = "Guardar", Location = new Point(220, 235), Size = new Size(110, 36),
-                BackColor = Color.FromArgb(27, 68, 170), ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
+            txtPassword.MaxLength = txtConfirmarPassword.MaxLength = 100;
+            txtPassword.UseSystemPasswordChar = txtConfirmarPassword.UseSystemPasswordChar = true;
+            var guardar = ControlesRegistro.Boton("Guardar", ControlesRegistro.Primario, Color.White);
+            var cancelar = ControlesRegistro.Boton("Cancelar");
             guardar.Click += BtnGuardar_Click;
-            Button cancelar = new Button
-            {
-                Text = "Cancelar", Location = new Point(345, 235), Size = new Size(115, 36),
-                DialogResult = DialogResult.Cancel
-            };
-            Controls.Add(guardar);
-            Controls.Add(cancelar);
-            AcceptButton = guardar;
-            CancelButton = cancelar;
+            var contenido = DialogoCitorna.Campos(1,
+                ("Nueva contraseña", txtPassword, 40), ("Confirmar contraseña", txtConfirmarPassword, 40));
+            DialogoCitorna.Configurar(this, "Cambiar contraseña",
+                $"Cuenta: {nombreUsuario} · Entre 6 y 100 caracteres.", new Size(495, 340), contenido, guardar, cancelar);
         }
 
         private void BtnGuardar_Click(object? sender, EventArgs e)

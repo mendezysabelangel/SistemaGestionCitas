@@ -1,373 +1,258 @@
+﻿using System.Globalization;
+using SistemaGestionCitas.src.Data;
 using SistemaGestionCitas.src.Models;
 using SistemaGestionCitas.src.Services;
-using SistemaGestionCitas.src.Data;
 
-namespace SistemaGestionCitas.src.Forms
+namespace SistemaGestionCitas.src.Forms;
+
+public class FrmUsuarios : Form
 {
-    public class FrmUsuarios : Form
+    private readonly ComboBox rolFiltro = ControlesRegistro.Opciones("Todos los roles");
+    private readonly ComboBox estadoFiltro = ControlesRegistro.Opciones("Todos", "Activo", "Inactivo");
+    private readonly ComboBox bloqueoFiltro = ControlesRegistro.Opciones("Todos", "Bloqueados", "Sin bloqueo");
+    private readonly System.Windows.Forms.Timer vencimientos = new();
+    private readonly VistaRegistros<Usuario> vista = new("Usuarios", "Gestión de cuentas y accesos",
+        "Buscar por nombre, usuario o correo", "usuario", u => u.IdUsuario, "Actualizar listado",
+        permisoConsulta: PermisosSistema.CrearUsuarios, permisoNuevo: PermisosSistema.CrearUsuarios,
+        etiquetaConsulta: "Buscar");
+    private List<Usuario>? usuarios;
+    private List<string> rolesActivos = new();
+    private bool cargandoFiltros;
+
+    public FrmUsuarios()
     {
-        private readonly UsuarioService usuarioService = new UsuarioService();
-        private readonly RolRepository rolRepository = new RolRepository();
-        private readonly DataGridView dgvUsuarios = new DataGridView();
-        private readonly Button btnNuevo = new Button();
-        private readonly Button btnModificar = new Button();
-        private readonly Button btnPassword = new Button();
-        private readonly Button btnEliminar = new Button();
-        private readonly Button btnLimpiar = new Button();
-        private readonly TextBox txtId = new TextBox();
-        private readonly TextBox txtNombreCompleto = new TextBox();
-        private readonly TextBox txtNombreUsuario = new TextBox();
-        private readonly TextBox txtCorreo = new TextBox();
-        private readonly ComboBox cmbRol = new ComboBox();
-        private readonly CheckBox chkActivo = new CheckBox();
-        private readonly Label lblTotal = new Label();
-        private readonly Label lblSeleccion = new Label();
-        private readonly Color azul = Color.FromArgb(27, 68, 170);
-        private List<string> rolesActivos = new List<string>();
-        private int? idSeleccionado;
-        private string nombreUsuarioSeleccionado = "";
-        private bool cargandoUsuarios;
-
-        public FrmUsuarios()
+        SuspendLayout();
+        Text = "Usuarios";
+        Name = "FrmUsuarios";
+        FormBorderStyle = FormBorderStyle.None;
+        ClientSize = new Size(1040, 650);
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        vista.Tabla.RowTemplate.Height = 43;
+        vista.Tabla.AgregarColumna("Usuario", 23, 75);
+        vista.Tabla.AgregarColumna("Nombre completo", 31, 118);
+        vista.Tabla.AgregarColumna("Correo", 29, 96);
+        vista.Tabla.AgregarColumna("Estado", 16, 70);
+        vista.Tabla.AgregarColumna("Bloqueo", 19, 90);
+        vista.Tabla.SizeChanged += (_, _) =>
         {
-            ConstruirInterfaz();
-            Load += FrmUsuarios_Load;
-        }
-
-        private void ConstruirInterfaz()
+            // El correo permanece visible en la ficha cuando falta ancho en el listado.
+            vista.Tabla.Columns["Correo"].Visible = vista.Tabla.Width >= LogicalToDeviceUnits(485);
+        };
+        vista.Tabla.CellFormatting += (_, e) =>
         {
-            Text = "Gestión de Usuarios";
-            Font = new Font("Segoe UI", 10F);
-            BackColor = Color.FromArgb(247, 248, 252);
-            ClientSize = new Size(1000, 700);
-            AutoScaleMode = AutoScaleMode.Font;
-
-            Panel cabecera = new Panel { Dock = DockStyle.Top, Height = 75, BackColor = Color.White };
-            cabecera.Controls.Add(new Label
-            {
-                Text = "Usuarios", Font = new Font("Segoe UI", 18F, FontStyle.Bold),
-                ForeColor = azul, AutoSize = true, Location = new Point(15, 20)
-            });
-
-            FlowLayoutPanel acciones = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Right, Width = 370,
-                Padding = new Padding(10, 17, 10, 10), WrapContents = false
-            };
-            acciones.Controls.Add(ConfigurarBoton(btnNuevo, "Nuevo", 100, azul, Color.White, BtnNuevo_Click));
-            acciones.Controls.Add(ConfigurarBoton(new Button(), "Actualizar", 115,
-                Color.White, azul, (s, e) => Consultar()));
-            acciones.Controls.Add(ConfigurarBoton(new Button(), "Cerrar", 100,
-                Color.White, Color.Black, (s, e) => Close()));
-            cabecera.Controls.Add(acciones);
-
-            Panel pie = new Panel { Dock = DockStyle.Bottom, Height = 70, BackColor = Color.White };
-            lblTotal.Text = "Usuarios registrados: 0";
-            lblTotal.Dock = DockStyle.Top;
-            lblTotal.Height = 33;
-            lblTotal.Padding = new Padding(15, 8, 0, 0);
-            lblSeleccion.Text = "Seleccione un usuario de la tabla.";
-            lblSeleccion.Dock = DockStyle.Fill;
-            lblSeleccion.Padding = new Padding(15, 0, 15, 0);
-            lblSeleccion.TextAlign = ContentAlignment.MiddleLeft;
-            lblSeleccion.AutoEllipsis = true;
-            pie.Controls.Add(lblSeleccion);
-            pie.Controls.Add(lblTotal);
-
-            GroupBox datos = CrearEditor();
-            ConfigurarTabla();
-            Controls.Add(dgvUsuarios);
-            Controls.Add(datos);
-            Controls.Add(pie);
-            Controls.Add(cabecera);
-            dgvUsuarios.BringToFront();
-            ConfigurarPermisos();
-        }
-
-        private GroupBox CrearEditor()
+            if (vista.Registro(e.RowIndex) is not { } usuario) return;
+            if (e.ColumnIndex == 3)
+                e.CellStyle!.ForeColor = usuario.Activo ? Color.FromArgb(0, 90, 73) : ControlesRegistro.Peligro;
+            else if (e.ColumnIndex == 4 && usuario.EstaBloqueado(DateTime.Now))
+                e.CellStyle!.ForeColor = ControlesRegistro.Peligro;
+        };
+        vista.ValorCelda = (usuario, columna) => columna switch
         {
-            GroupBox datos = new GroupBox
-            {
-                Text = "Datos del usuario", Dock = DockStyle.Bottom, Height = 220
-            };
-            TableLayoutPanel campos = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top, Height = 140, ColumnCount = 4, RowCount = 3,
-                Padding = new Padding(10, 8, 10, 0)
-            };
-            campos.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 145));
-            campos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            campos.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
-            campos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            for (int i = 0; i < 3; i++)
-                campos.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
-
-            txtNombreCompleto.MaxLength = 100;
-            txtNombreUsuario.MaxLength = 50;
-            txtCorreo.MaxLength = 100;
-            txtId.ReadOnly = true;
-            cmbRol.DropDownStyle = ComboBoxStyle.DropDownList;
-            chkActivo.Text = "Usuario activo";
-            chkActivo.Checked = true;
-
-            AgregarCampo(campos, "Nombre completo:", txtNombreCompleto, 0, 0);
-            AgregarCampo(campos, "Usuario:", txtNombreUsuario, 2, 0);
-            AgregarCampo(campos, "Correo:", txtCorreo, 0, 1);
-            AgregarCampo(campos, "Rol:", cmbRol, 2, 1);
-            AgregarCampo(campos, "ID:", txtId, 0, 2);
-            AgregarCampo(campos, "Estado:", chkActivo, 2, 2);
-
-            FlowLayoutPanel botones = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Bottom, Height = 60,
-                Padding = new Padding(12, 9, 12, 8), WrapContents = false
-            };
-            botones.Controls.Add(ConfigurarBoton(btnModificar, "Modificar", 120, azul, Color.White, BtnModificar_Click));
-            botones.Controls.Add(ConfigurarBoton(btnPassword, "Cambiar contraseña", 185, Color.White, azul, BtnPassword_Click));
-            botones.Controls.Add(ConfigurarBoton(btnEliminar, "Eliminar", 110, Color.FromArgb(185, 28, 28), Color.White, BtnEliminar_Click));
-            botones.Controls.Add(ConfigurarBoton(btnLimpiar, "Limpiar", 105, Color.White, Color.Black, (s, e) =>
-            {
-                dgvUsuarios.ClearSelection();
-                LimpiarFormulario();
-            }));
-            datos.Controls.Add(botones);
-            datos.Controls.Add(campos);
-            return datos;
-        }
-
-        private void AgregarCampo(TableLayoutPanel panel, string texto, Control campo, int columna, int fila)
+            0 => usuario.NombreUsuario,
+            1 => usuario.NombreCompleto,
+            2 => ControlesRegistro.Disponible(usuario.Correo),
+            3 => usuario.Estado,
+            4 => usuario.EstaBloqueado(DateTime.Now) ? "Bloqueado" : "Sin bloqueo",
+            _ => null
+        };
+        vista.MostrarSeleccion = MostrarFicha;
+        vista.AgregarFiltros(("Rol", rolFiltro), ("Estado", estadoFiltro), ("Bloqueo temporal", bloqueoFiltro));
+        vista.Consultar += () => Consultar();
+        vista.AccionExtra!.Click += (_, _) => Consultar(renovar: true);
+        vista.ReintentarConsulta = () => Consultar(renovar: true);
+        estadoFiltro.SelectedIndexChanged += (_, _) => { if (!cargandoFiltros) Consultar(); };
+        rolFiltro.SelectedIndexChanged += (_, _) => { if (!cargandoFiltros) Consultar(); };
+        bloqueoFiltro.SelectedIndexChanged += (_, _) => { if (!cargandoFiltros) Consultar(); };
+        vista.Restablecer += () =>
         {
-            panel.Controls.Add(new Label
-            {
-                Text = texto, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft
-            }, columna, fila);
-            campo.Dock = DockStyle.Fill;
-            campo.Margin = new Padding(3, 5, 12, 5);
-            panel.Controls.Add(campo, columna + 1, fila);
-        }
-
-        private Button ConfigurarBoton(Button boton, string texto, int ancho,
-                                       Color fondo, Color letra, EventHandler alHacerClic)
+            cargandoFiltros = true;
+            vista.Busqueda.Clear();
+            rolFiltro.SelectedIndex = 0;
+            estadoFiltro.SelectedIndex = 0;
+            bloqueoFiltro.SelectedIndex = 0;
+            cargandoFiltros = false;
+            Consultar(sinSeleccion: true);
+        };
+        vista.Nuevo += CrearCuenta;
+        vista.Editar += EditarCuenta;
+        vista.Eliminar += EliminarCuenta;
+        vista.ConfigurarAccionesCuenta(usuario => !CuentaActual(usuario), CambiarPassword,
+            usuario => usuario.EstaBloqueado(DateTime.Now), DesbloquearCuenta);
+        vencimientos.Tick += (_, _) =>
         {
-            boton.Text = texto;
-            boton.Size = new Size(ancho, 36);
-            boton.BackColor = fondo;
-            boton.ForeColor = letra;
-            boton.FlatStyle = FlatStyle.Flat;
-            boton.FlatAppearance.BorderColor = fondo == Color.White ? Color.Silver : fondo;
-            boton.Cursor = Cursors.Hand;
-            boton.Click += alHacerClic;
-            return boton;
-        }
-
-        private void ConfigurarTabla()
-        {
-            dgvUsuarios.Dock = DockStyle.Fill;
-            dgvUsuarios.ReadOnly = true;
-            dgvUsuarios.AllowUserToAddRows = false;
-            dgvUsuarios.AllowUserToDeleteRows = false;
-            dgvUsuarios.MultiSelect = false;
-            dgvUsuarios.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvUsuarios.AutoGenerateColumns = false;
-            dgvUsuarios.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvUsuarios.BackgroundColor = Color.White;
-            dgvUsuarios.RowHeadersVisible = false;
-            dgvUsuarios.EnableHeadersVisualStyles = false;
-            dgvUsuarios.ColumnHeadersDefaultCellStyle.BackColor = azul;
-            dgvUsuarios.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvUsuarios.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 244, 252);
-
-            AgregarColumna(nameof(Usuario.IdUsuario), "ID", 7, 55);
-            AgregarColumna(nameof(Usuario.NombreUsuario), "Usuario", 16, 120);
-            AgregarColumna(nameof(Usuario.NombreCompleto), "Nombre completo", 24, 170);
-            AgregarColumna(nameof(Usuario.Correo), "Correo", 24, 190);
-            AgregarColumna(nameof(Usuario.NombreRol), "Rol", 15, 110);
-            AgregarColumna(nameof(Usuario.Estado), "Estado", 10, 90);
-            dgvUsuarios.SelectionChanged += DgvUsuarios_SelectionChanged;
-        }
-
-        private void AgregarColumna(string propiedad, string titulo, int peso, int anchoMinimo)
-        {
-            dgvUsuarios.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "col" + propiedad, DataPropertyName = propiedad, HeaderText = titulo,
-                FillWeight = peso, MinimumWidth = anchoMinimo,
-                SortMode = DataGridViewColumnSortMode.NotSortable
-            });
-        }
-
-        private void FrmUsuarios_Load(object? sender, EventArgs e)
+            ProgramarVencimiento();
+            Consultar();
+        };
+        Controls.Add(vista);
+        vista.ActualizarPermisos();
+        Load += (_, _) =>
         {
             if (!SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "consultar usuarios"))
-            {
                 Close();
-                return;
-            }
-            Consultar();
+        };
+        Shown += (_, _) =>
+        {
+            vista.Tabla.RowTemplate.Height = LogicalToDeviceUnits(43);
+            Consultar(renovar: true);
+        };
+        ResumeLayout(true);
+    }
+
+    private void Consultar(bool renovar = false, int? seleccionarId = null, bool sinSeleccion = false)
+    {
+        string texto = vista.Busqueda.Text.Trim();
+        string? rol = rolFiltro.SelectedIndex > 0 ? rolFiltro.SelectedItem?.ToString() : null;
+        bool? activo = ControlesRegistro.Estado(estadoFiltro.SelectedIndex);
+        bool? bloqueado = bloqueoFiltro.SelectedIndex switch { 1 => true, 2 => false, _ => null };
+        List<Usuario>? cache = renovar ? null : usuarios;
+
+        vista.Cargar(() =>
+        {
+            var lista = cache ?? new UsuarioService().ListarUsuarios();
+            var roles = cache == null ? new RolRepository().ObtenerRolesActivos() : null;
+            DateTime ahora = DateTime.Now;
+            List<Usuario> filtrados = lista.Where(u => (!activo.HasValue || u.Activo == activo)
+                && (!bloqueado.HasValue || u.EstaBloqueado(ahora) == bloqueado)
+                && (rol == null || string.Equals(u.NombreRol, rol, StringComparison.CurrentCultureIgnoreCase))
+                && (texto.Length == 0 || Coincide(u.NombreUsuario) || Coincide(u.NombreCompleto) || Coincide(u.Correo))).ToList();
+            return (filtrados, roles == null ? null : () => GuardarListado(lista, roles, rol));
+        }, texto.Length > 0 || rol != null || activo.HasValue || bloqueado.HasValue, seleccionarId, sinSeleccion);
+
+        bool Coincide(string? dato) => dato?.Contains(texto, StringComparison.CurrentCultureIgnoreCase) == true;
+    }
+
+    private void GuardarListado(List<Usuario> lista, List<string> roles, string? rol)
+    {
+        usuarios = lista;
+        rolesActivos = roles;
+        ProgramarVencimiento();
+        cargandoFiltros = true;
+        try
+        {
+            var opciones = roles.Concat(lista.Select(u => u.NombreRol))
+                .Where(nombre => !string.IsNullOrWhiteSpace(nombre))
+                .Distinct(StringComparer.CurrentCultureIgnoreCase).OrderBy(nombre => nombre).ToList();
+            // Si el último usuario de un rol desaparece, el filtro conserva su nombre.
+            if (rol != null && !opciones.Contains(rol, StringComparer.CurrentCultureIgnoreCase)) opciones.Add(rol);
+            rolFiltro.Items.Clear();
+            rolFiltro.Items.Add("Todos los roles");
+            rolFiltro.Items.AddRange(opciones.Cast<object>().ToArray());
+            rolFiltro.SelectedIndex = rol == null ? 0 : 1 + opciones.FindIndex(nombre =>
+                string.Equals(nombre, rol, StringComparison.CurrentCultureIgnoreCase));
+        }
+        finally { cargandoFiltros = false; }
+    }
+
+    private void ProgramarVencimiento()
+    {
+        vencimientos.Stop();
+        DateTime ahora = DateTime.Now;
+        DateTime? proximo = usuarios?.Where(u => u.EstaBloqueado(ahora)).Min(u => u.BloqueadoHasta);
+        if (proximo is not { } hasta) return;
+
+        // Refrescar el estado al vencer el próximo bloqueo, sin volver a consultar SQL.
+        vencimientos.Interval = (int)Math.Clamp(Math.Ceiling((hasta - ahora).TotalMilliseconds), 50, int.MaxValue);
+        vencimientos.Start();
+    }
+
+    private void MostrarFicha(Usuario? usuario)
+    {
+        if (usuario == null)
+        {
+            vista.PresentarFicha("Selecciona un usuario para consultar sus datos");
+            return;
+        }
+        string bloqueo = usuario.BloqueadoHasta is { } hasta && usuario.EstaBloqueado(DateTime.Now)
+            ? "Bloqueado hasta " + hasta.ToString("dd/MM/yyyy h:mm tt", CultureInfo.InvariantCulture)
+            : "Sin bloqueo";
+        vista.PresentarFicha(usuario.NombreCompleto,
+            ("Usuario", usuario.NombreUsuario),
+            ("Correo", ControlesRegistro.Disponible(usuario.Correo)),
+            ("Rol asignado", ControlesRegistro.Disponible(usuario.NombreRol)),
+            ("Estado", usuario.Estado),
+            ("Bloqueo temporal", bloqueo));
+    }
+
+    private static bool CuentaActual(Usuario usuario) => SesionActual.UsuarioActual?.IdUsuario == usuario.IdUsuario;
+
+    private static bool VerificarAccion(string permiso, string accion) =>
+        SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, accion) && SesionActual.VerificarPermiso(permiso, accion);
+
+    private void CrearCuenta()
+    {
+        if (!SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "crear usuarios")) return;
+        using var formulario = new CrearUsuario();
+        if (formulario.ShowDialog(this) == DialogResult.OK) Consultar(renovar: true, sinSeleccion: true);
+    }
+
+    private void EditarCuenta(Usuario usuario)
+    {
+        if (!VerificarAccion(PermisosSistema.Modificar, "modificar usuarios")) return;
+        bool propia = CuentaActual(usuario);
+        using var editor = new EditorRegistro("Editar usuario", PermisosSistema.Modificar, true, PermisosSistema.CrearUsuarios);
+        var nombre = ControlesRegistro.Texto(100, usuario.NombreCompleto);
+        var cuenta = ControlesRegistro.Texto(50, usuario.NombreUsuario);
+        var correo = ControlesRegistro.Texto(100, usuario.Correo ?? "");
+        var roles = ControlesRegistro.Opciones(rolesActivos.Append(usuario.NombreRol).Distinct().Cast<object>().ToArray());
+        roles.SelectedItem = usuario.NombreRol;
+        roles.Enabled = !propia;
+        var activo = new CheckBox { Text = "Cuenta activa", Checked = usuario.Activo, Enabled = !propia, AutoSize = true };
+        editor.AgregarCampo("Nombre completo", nombre);
+        editor.AgregarCampo("Nombre de usuario", cuenta);
+        editor.AgregarCampo("Correo electrónico", correo);
+        editor.AgregarCampo("Rol", roles);
+        editor.AgregarCampo("Estado", activo);
+        editor.PrepararGuardado = () =>
+        {
+            string nombrePuesto = nombre.Text, cuentaPuesta = cuenta.Text, correoPuesto = correo.Text;
+            string rol = propia ? usuario.NombreRol : roles.SelectedItem?.ToString() ?? "";
+            bool estado = propia ? usuario.Activo : activo.Checked;
+            return () => new UsuarioService().ModificarUsuario(usuario.IdUsuario, nombrePuesto, cuentaPuesta, correoPuesto, rol, estado);
+        };
+        if (editor.ShowDialog(this) != DialogResult.OK) return;
+        if (MdiParent is FrmDashboard dashboard) dashboard.ActualizarDatosSesion();
+        Consultar(renovar: true, seleccionarId: usuario.IdUsuario);
+    }
+
+    private void CambiarPassword(Usuario usuario)
+    {
+        if (!VerificarAccion(PermisosSistema.Modificar, "cambiar contraseñas")) return;
+        using var formulario = new FrmCambiarPasswordUsuario(usuario.IdUsuario, usuario.NombreUsuario);
+        if (formulario.ShowDialog(this) == DialogResult.OK) Consultar(renovar: true, seleccionarId: usuario.IdUsuario);
+    }
+
+    private async void DesbloquearCuenta(Usuario usuario)
+    {
+        if (!VerificarAccion(PermisosSistema.Modificar, "desbloquear usuarios")) return;
+        if (!usuario.EstaBloqueado(DateTime.Now))
+        {
+            Consultar(renovar: true, seleccionarId: usuario.IdUsuario);
+            return;
         }
 
-        private void Consultar(int? seleccionarId = null)
-        {
-            cargandoUsuarios = true;
-            try
+        if (MessageBox.Show(this, $"¿Desbloquear a {usuario.NombreUsuario}? El estado de la cuenta permanecerá igual.",
+            "Confirmar desbloqueo", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+            MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
+
+        await vista.EjecutarOperacionAsync("Desbloquear", () => new UsuarioService().DesbloquearUsuario(usuario.IdUsuario),
+            resultado =>
             {
-                List<Usuario> usuarios = usuarioService.ListarUsuarios();
-                rolesActivos = rolRepository.ObtenerRolesActivos();
-                dgvUsuarios.DataSource = usuarios;
-                dgvUsuarios.ClearSelection();
-                LimpiarFormulario();
-                lblTotal.Text = "Usuarios registrados: " + usuarios.Count;
-            }
-            catch (Exception ex)
-            {
-                dgvUsuarios.DataSource = null;
-                LimpiarFormulario();
-                lblTotal.Text = "No se pudo cargar el listado de usuarios.";
-                MessageBox.Show("No se pudieron consultar los usuarios.\n\n" + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                cargandoUsuarios = false;
-            }
-
-            if (seleccionarId.HasValue)
-            {
-                foreach (DataGridViewRow fila in dgvUsuarios.Rows)
-                {
-                    if (fila.DataBoundItem is Usuario usuario && usuario.IdUsuario == seleccionarId.Value)
-                    {
-                        dgvUsuarios.CurrentCell = fila.Cells[0];
-                        fila.Selected = true;
-                        break;
-                    }
-                }
-            }
-            ConfigurarPermisos();
-        }
-
-        private void DgvUsuarios_SelectionChanged(object? sender, EventArgs e)
-        {
-            if (cargandoUsuarios) return;
-            if (dgvUsuarios.SelectedRows.Count == 0 ||
-                dgvUsuarios.SelectedRows[0].DataBoundItem is not Usuario usuario)
-            {
-                LimpiarFormulario();
-                return;
-            }
-
-            idSeleccionado = usuario.IdUsuario;
-            nombreUsuarioSeleccionado = usuario.NombreUsuario;
-            txtId.Text = usuario.IdUsuario.ToString();
-            txtNombreCompleto.Text = usuario.NombreCompleto;
-            txtNombreUsuario.Text = usuario.NombreUsuario;
-            txtCorreo.Text = usuario.Correo ?? "";
-            List<string> roles = new List<string>(rolesActivos);
-            if (!roles.Contains(usuario.NombreRol)) roles.Add(usuario.NombreRol);
-            cmbRol.DataSource = roles;
-            cmbRol.SelectedItem = usuario.NombreRol;
-            chkActivo.Checked = usuario.Activo;
-            lblSeleccion.Text = $"Usuario seleccionado: {usuario.NombreUsuario} (ID: {usuario.IdUsuario})";
-            ConfigurarPermisos();
-        }
-
-        private void LimpiarFormulario()
-        {
-            idSeleccionado = null;
-            nombreUsuarioSeleccionado = "";
-            txtId.Clear();
-            txtNombreCompleto.Clear();
-            txtNombreUsuario.Clear();
-            txtCorreo.Clear();
-            cmbRol.DataSource = new List<string>(rolesActivos);
-            cmbRol.SelectedIndex = -1;
-            chkActivo.Checked = true;
-            lblSeleccion.Text = "Seleccione un usuario de la tabla.";
-            ConfigurarPermisos();
-        }
-
-        private void ConfigurarPermisos()
-        {
-            bool administrar = SesionActual.HaySesion && SesionActual.TienePermiso(PermisosSistema.CrearUsuarios);
-            bool modificar = administrar && SesionActual.TienePermiso(PermisosSistema.Modificar);
-            bool eliminar = administrar && SesionActual.TienePermiso(PermisosSistema.Eliminar);
-            bool seleccionado = idSeleccionado.HasValue;
-            bool cuentaActual = seleccionado && idSeleccionado == SesionActual.UsuarioActual?.IdUsuario;
-            btnNuevo.Visible = administrar;
-            btnModificar.Visible = btnPassword.Visible = modificar;
-            btnEliminar.Visible = eliminar;
-            btnModificar.Enabled = btnPassword.Enabled = seleccionado && modificar;
-            btnEliminar.Enabled = seleccionado && eliminar && !cuentaActual;
-            txtNombreCompleto.Enabled = txtNombreUsuario.Enabled = txtCorreo.Enabled = seleccionado && modificar;
-            cmbRol.Enabled = chkActivo.Enabled = seleccionado && modificar && !cuentaActual;
-        }
-
-        private bool VerificarSeleccion()
-        {
-            if (idSeleccionado.HasValue) return true;
-            MessageBox.Show("Seleccione un usuario de la tabla.", "Usuario requerido",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return false;
-        }
-
-        private bool VerificarAccion(string permiso, string accion)
-        {
-            return SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, accion) &&
-                SesionActual.VerificarPermiso(permiso, accion);
-        }
-
-        private void BtnModificar_Click(object? sender, EventArgs e)
-        {
-            if (!VerificarAccion(PermisosSistema.Modificar, "modificar usuarios") || !VerificarSeleccion()) return;
-            int id = idSeleccionado!.Value;
-            EjecutarOperacion(() => usuarioService.ModificarUsuario(id, txtNombreCompleto.Text,
-                txtNombreUsuario.Text, txtCorreo.Text, cmbRol.SelectedItem?.ToString() ?? "", chkActivo.Checked),
-                "Modificar usuario", id);
-        }
-
-        private void BtnPassword_Click(object? sender, EventArgs e)
-        {
-            if (!VerificarAccion(PermisosSistema.Modificar, "cambiar contraseñas") || !VerificarSeleccion()) return;
-            int id = idSeleccionado!.Value;
-            using FrmCambiarPasswordUsuario formulario = new FrmCambiarPasswordUsuario(id, nombreUsuarioSeleccionado);
-            if (formulario.ShowDialog(this) == DialogResult.OK)
-                Consultar(id);
-        }
-
-        private void BtnEliminar_Click(object? sender, EventArgs e)
-        {
-            if (!VerificarAccion(PermisosSistema.Eliminar, "eliminar usuarios") || !VerificarSeleccion()) return;
-            int id = idSeleccionado!.Value;
-            if (MessageBox.Show($"¿Desea eliminar al usuario {nombreUsuarioSeleccionado}?",
-                "Confirmar eliminación", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-            EjecutarOperacion(() => usuarioService.EliminarUsuario(id), "Eliminar usuario");
-        }
-
-        private void EjecutarOperacion(Func<ResultadoOperacion> operacion, string titulo, int? seleccionarId = null)
-        {
-            try
-            {
-                ResultadoOperacion resultado = operacion();
-                MessageBox.Show(resultado.Mensaje, titulo, MessageBoxButtons.OK,
+                Consultar(renovar: true, seleccionarId: usuario.IdUsuario);
+                MessageBox.Show(this, resultado.Mensaje, "Desbloquear usuario", MessageBoxButtons.OK,
                     resultado.Exitoso ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
-                if (!resultado.Exitoso) return;
-                if (MdiParent is FrmDashboard dashboard) dashboard.ActualizarDatosSesion();
-                Consultar(seleccionarId);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("No se pudo completar la operación.\n\n" + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+            });
+    }
 
-        private void BtnNuevo_Click(object? sender, EventArgs e)
-        {
-            if (!SesionActual.VerificarPermiso(PermisosSistema.CrearUsuarios, "crear usuarios")) return;
-            using CrearUsuario formulario = new CrearUsuario();
-            if (formulario.ShowDialog(this) == DialogResult.OK)
-                Consultar();
-        }
+    private async void EliminarCuenta(Usuario usuario)
+    {
+        if (CuentaActual(usuario)) return;
+        await vista.EliminarConfirmadoAsync(usuario.NombreUsuario, () => new UsuarioService().EliminarUsuario(usuario.IdUsuario),
+            () => Consultar(renovar: true, sinSeleccion: true));
+    }
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) vencimientos.Dispose();
+        base.Dispose(disposing);
     }
 }

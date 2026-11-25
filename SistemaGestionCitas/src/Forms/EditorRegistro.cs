@@ -12,12 +12,14 @@ internal sealed class EditorRegistro : Form
     private readonly Button cancelar;
     private readonly Font fuente = new("Segoe UI", 11F);
     private readonly string permiso;
+    private readonly string? permisoAcceso;
     private bool guardando;
     internal Func<Func<ResultadoOperacion>?>? PrepararGuardado { get; set; }
 
-    internal EditorRegistro(string titulo, string permiso, bool edicion)
+    internal EditorRegistro(string titulo, string permiso, bool edicion, string? permisoAcceso = null)
     {
         this.permiso = permiso;
+        this.permisoAcceso = permisoAcceso;
         SuspendLayout();
         Text = titulo;
         Font = fuente;
@@ -75,15 +77,16 @@ internal sealed class EditorRegistro : Form
     internal void AgregarCampo(string nombre, Control control)
     {
         var etiqueta = new Label { Text = nombre, AutoSize = true, Dock = DockStyle.Fill, Margin = Padding.Empty };
-        control.AccessibleName = nombre;
-        control.Dock = DockStyle.Fill;
-        control.Margin = new Padding(0, 0, 5, 5);
+        Control entrada = control is CheckBox ? control : CampoCitorna.Enmarcar(control, nombre);
+        if (control is CheckBox) control.AccessibleName = nombre;
+        entrada.Dock = DockStyle.Top;
+        entrada.Margin = new Padding(0, 2, 5, 7);
         int fila = campos.RowCount;
         campos.RowCount += 2;
         campos.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         campos.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         campos.Controls.Add(etiqueta, 0, fila);
-        campos.Controls.Add(control, 0, fila + 1);
+        campos.Controls.Add(entrada, 0, fila + 1);
     }
 
     internal Func<ResultadoOperacion>? Advertir(string texto, Control campo)
@@ -101,7 +104,8 @@ internal sealed class EditorRegistro : Form
 
     private async void GuardarAsync()
     {
-        if (guardando || !SesionActual.VerificarPermiso(permiso, "guardar este registro")) return;
+        if (guardando || (permisoAcceso != null && !SesionActual.VerificarPermiso(permisoAcceso, "guardar este registro"))
+            || !SesionActual.VerificarPermiso(permiso, "guardar este registro")) return;
         MostrarMensaje("");
         Func<ResultadoOperacion>? guardarRegistro = PrepararGuardado?.Invoke();
         if (guardarRegistro == null) return;

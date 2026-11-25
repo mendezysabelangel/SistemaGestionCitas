@@ -13,5 +13,7 @@
         public string Estado => Activo ? "Activo" : "Inactivo";
         public int IntentosFallidos { get; set; }
         public DateTime? BloqueadoHasta { get; set; }
+
+        internal bool EstaBloqueado(DateTime ahora) => BloqueadoHasta > ahora;
     }
 }

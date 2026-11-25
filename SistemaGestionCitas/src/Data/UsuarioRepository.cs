@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using System.Data;
 using SistemaGestionCitas.src.Models;
 
 namespace SistemaGestionCitas.src.Data
@@ -11,7 +12,7 @@ namespace SistemaGestionCitas.src.Data
         {
             List<Usuario> usuarios = new List<Usuario>();
             string sql = @"SELECT U.IdUsuario, U.NombreUsuario, U.NombreCompleto,
-                                  U.Correo, U.IdRol, R.Nombre AS NombreRol, U.Activo
+                                  U.Correo, U.IdRol, R.Nombre AS NombreRol, U.Activo, U.BloqueadoHasta
                            FROM Usuarios U
                            INNER JOIN Roles R ON U.IdRol = R.IdRol
                            ORDER BY U.IdUsuario";
@@ -31,7 +32,8 @@ namespace SistemaGestionCitas.src.Data
                     Correo = reader["Correo"] == DBNull.Value ? null : (string)reader["Correo"],
                     IdRol = (int)reader["IdRol"],
                     NombreRol = (string)reader["NombreRol"],
-                    Activo = (bool)reader["Activo"]
+                    Activo = (bool)reader["Activo"],
+                    BloqueadoHasta = reader["BloqueadoHasta"] is DateTime vencimiento ? vencimiento : null
                 });
             }
 
@@ -100,6 +102,20 @@ namespace SistemaGestionCitas.src.Data
         public void ReiniciarIntentos(int idUsuario)
         {
             ActualizarIntentos(idUsuario, 0, null);
+        }
+
+        internal bool Desbloquear(int idUsuario)
+        {
+            const string sql = @"UPDATE Usuarios
+                                 SET IntentosFallidos = 0, BloqueadoHasta = NULL
+                                 WHERE IdUsuario = @idUsuario AND BloqueadoHasta > @ahora";
+
+            using SqlConnection con = conexion.CrearConexion();
+            using SqlCommand cmd = new SqlCommand(sql, con);
+            cmd.Parameters.Add("@idUsuario", SqlDbType.Int).Value = idUsuario;
+            con.Open();
+            cmd.Parameters.Add("@ahora", SqlDbType.DateTime2).Value = DateTime.Now;
+            return cmd.ExecuteNonQuery() > 0;
         }
 
         public Usuario? ObtenerPorId(int idUsuario)

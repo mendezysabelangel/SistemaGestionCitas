@@ -114,29 +114,25 @@ namespace SistemaGestionCitas.src.Forms
                 TabStop = false
             };
 
-            Label etiqueta = new Label
-            {
-                Text = nombre,
-                AutoSize = true,
-                Location = new Point(57, 5),
-                BackColor = Color.Transparent,
-                ForeColor = TextoEtiqueta,
-                TabIndex = 0
-            };
             texto.AccessibleName = nombre;
-            texto.TabIndex = 1;
+            texto.PlaceholderText = nombre;
+            texto.TabIndex = 0;
             texto.BorderStyle = BorderStyle.None;
             texto.BackColor = Color.White;
             texto.ForeColor = AzulMarino;
-            texto.Location = new Point(58, 26);
+            texto.Left = 58;
             texto.Width = password ? 237 : 277;
-            campo.Controls.Add(etiqueta);
             campo.Controls.Add(texto);
+
+            void CentrarTexto() => texto.Top = (campo.ClientSize.Height - texto.Height) / 2;
+            campo.Resize += (_, _) => CentrarTexto();
+            texto.SizeChanged += (_, _) => CentrarTexto();
+            CentrarTexto();
 
             if (password)
             {
                 btnVerPassword.Bounds = new Rectangle(298, 6, 44, 44);
-                btnVerPassword.TabIndex = 2;
+                btnVerPassword.TabIndex = 1;
                 btnVerPassword.BackColor = Color.White;
                 btnVerPassword.FlatStyle = FlatStyle.Flat;
                 btnVerPassword.FlatAppearance.BorderSize = 0;
@@ -153,7 +149,6 @@ namespace SistemaGestionCitas.src.Forms
             campo.Enter += (_, _) => campo.Invalidate();
             campo.Leave += (_, _) => campo.Invalidate();
             campo.Click += (_, _) => texto.Focus();
-            etiqueta.Click += (_, _) => texto.Focus();
             return campo;
         }
 
@@ -211,7 +206,7 @@ namespace SistemaGestionCitas.src.Forms
             lienzo.FillPath(Brushes.White, forma);
             lienzo.DrawPath(borde, forma);
 
-            // Iconos lineales decorativos. Las etiquetas identifican los campos.
+            // Iconos lineales decorativos. Cada campo mantiene su nombre accesible.
             var estado = lienzo.Save();
             lienzo.TranslateTransform(LogicalToDeviceUnits(29), campo.Height / 2F);
             float escala = campo.DeviceDpi / 96F;

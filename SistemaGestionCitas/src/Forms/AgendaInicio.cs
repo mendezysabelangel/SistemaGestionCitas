@@ -47,6 +47,8 @@ internal sealed class AgendaInicio : UserControl
         anterior = CrearFlecha("Mes anterior", SimboloAgenda.Anterior, -1);
         siguiente = CrearFlecha("Mes siguiente", SimboloAgenda.Siguiente, 1);
 
+        ResizeRedraw = true;
+        pagina.BackColor = Color.Transparent;
         pagina.Dock = DockStyle.Top;
         pagina.Padding = new Padding(24, 22, 24, 20);
         pagina.ColumnCount = 1;
@@ -269,16 +271,10 @@ internal sealed class AgendaInicio : UserControl
 
     private Button CrearFlecha(string nombre, SimboloAgenda simbolo, int movimiento)
     {
-        Button boton = BotonPlano();
-        boton.AccessibleName = nombre;
+        var boton = new BotonCitorna { Dock = DockStyle.Fill, Margin = new Padding(0, 2, 0, 2),
+            ForeColor = EstiloAgenda.Tinta, Cursor = Cursors.Hand, Icono = simbolo, AccessibleName = nombre };
         boton.FlatAppearance.BorderSize = 1;
         boton.FlatAppearance.BorderColor = EstiloAgenda.Borde;
-        boton.Paint += (_, e) =>
-        {
-            int lado = boton.LogicalToDeviceUnits(22);
-            IconosAgenda.Dibujar(e.Graphics, simbolo, boton.Enabled ? EstiloAgenda.Tinta : SystemColors.GrayText,
-                new((boton.Width - lado) / 2, (boton.Height - lado) / 2, lado, lado));
-        };
         boton.Click += (_, _) =>
         {
             DateTime mes = new(seleccion.Year, seleccion.Month, 1);
@@ -297,6 +293,8 @@ internal sealed class AgendaInicio : UserControl
         boton.FlatAppearance.MouseOverBackColor = EstiloAgenda.Seleccion;
         return boton;
     }
+
+    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e);
 
     protected override void OnResize(EventArgs e)
     {

@@ -11,9 +11,9 @@ internal static class ControlesRegistro
 
     internal static Button Boton(string texto, Color? fondo = null, Color? tinta = null)
     {
-        var boton = new Button { Text = texto, AutoSize = true, MinimumSize = new Size(0, 40),
+        var boton = new BotonCitorna { Text = texto, AutoSize = true, MinimumSize = new Size(0, 40),
             FlatStyle = FlatStyle.Flat, Padding = new Padding(10, 0, 10, 0),
-            BackColor = fondo ?? Color.White, ForeColor = tinta ?? EstiloAgenda.Tinta,
+            Relleno = fondo ?? Color.White, ForeColor = tinta ?? EstiloAgenda.Tinta,
             UseVisualStyleBackColor = false, Cursor = Cursors.Hand };
         boton.FlatAppearance.BorderColor = tinta == Peligro ? Peligro : EstiloAgenda.Borde;
         if (fondo.HasValue) boton.FlatAppearance.BorderSize = 0;
@@ -95,6 +95,12 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     private readonly Func<T, int> idDe;
     private readonly string plural;
     private readonly string singular;
+    private readonly string permisoConsulta;
+    private readonly string permisoNuevo;
+    private Button? accionFichaAdicional;
+    private Button? desbloquear;
+    private Func<T, bool>? puedeDesbloquear;
+    private Func<T, bool>? puedeEliminar;
     private List<T> registros = new();
     private Action? accionEstadoActual;
     private bool aplicando;
@@ -111,6 +117,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     internal Button? AccionExtra { get; }
     internal event Action? Consultar;
     internal event Action? Restablecer;
+    internal Action? ReintentarConsulta { get; set; }
     internal event Action? Nuevo;
     internal event Action<T>? Editar;
     internal event Action<T>? Eliminar;
@@ -118,15 +125,20 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     internal Action<T?>? MostrarSeleccion { get; set; }
 
     internal VistaRegistros(string titulo, string subtitulo, string buscar, string singular, Func<T, int> idDe,
-        string? accionExtra = null)
+        string? accionExtra = null, string permisoConsulta = PermisosSistema.Consultar,
+        string permisoNuevo = PermisosSistema.Agregar, string? etiquetaConsulta = null)
     {
         this.idDe = idDe;
         this.singular = singular;
+        this.permisoConsulta = permisoConsulta;
+        this.permisoNuevo = permisoNuevo;
         plural = titulo.ToLowerInvariant();
         SuspendLayout();
+        Size = new Size(1040, 650);
         AutoScroll = true;
         Dock = DockStyle.Fill;
         DoubleBuffered = true;
+        ResizeRedraw = true;
         Font = fuenteBase;
         BackColor = EstiloAgenda.Fondo;
         nuevo = ControlesRegistro.Boton($"Nuevo {singular}", ControlesRegistro.Primario, Color.White);
@@ -137,6 +149,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         accionEstado.Click += (_, _) => accionEstadoActual?.Invoke();
 
         pagina.Dock = DockStyle.Top;
+        pagina.BackColor = Color.Transparent;
         pagina.Margin = Padding.Empty;
         pagina.Padding = new Padding(23, 20, 23, 18);
         pagina.ColumnCount = 1;
@@ -147,7 +160,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         pagina.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         pagina.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         pagina.Controls.Add(ConstruirCabecera(titulo, subtitulo), 0, 0);
-        pagina.Controls.Add(ConstruirBusqueda(buscar), 0, 1);
+        pagina.Controls.Add(ConstruirBusqueda(buscar, etiquetaConsulta ?? "Consultar"), 0, 1);
 
         filtros.Dock = DockStyle.Fill;
         filtros.AutoSize = true;
@@ -165,8 +178,8 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         Controls.Add(pagina);
         PresentarFicha($"Selecciona un {singular} para ver sus datos");
         MostrarEstado($"Cargando {plural}…");
-        ResumeLayout(true);
         Ajustar();
+        ResumeLayout(true);
     }
 
     private Control ConstruirCabecera(string titulo, string subtitulo)
@@ -189,15 +202,15 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
         return rejilla;
     }
 
-    private Control ConstruirBusqueda(string buscar)
+    private Control ConstruirBusqueda(string buscar, string etiquetaConsulta)
     {
         var barra = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, Margin = Padding.Empty };
         barra.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         barra.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var caja = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle,
-            Margin = new Padding(0, 2, 6, 6), Padding = new Padding(37, 0, 10, 0) };
+        var caja = new TarjetaAgenda { Dock = DockStyle.Fill, Radio = 11, ResaltarFoco = true,
+            Margin = new Padding(0, 3, 6, 3), Padding = new Padding(37, 0, 10, 0) };
         Busqueda.PlaceholderText = buscar;
         Busqueda.AccessibleName = buscar;
         Busqueda.MaxLength = 200;
@@ -214,6 +227,8 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
             e.Graphics.DrawLine(trazo, x + lado - 2, y + lado - 2, x + lado + 3, y + lado + 3);
         };
         caja.Click += (_, _) => Busqueda.Focus();
+        caja.Enter += (_, _) => caja.Invalidate();
+        caja.Leave += (_, _) => caja.Invalidate();
         caja.SizeChanged += (_, _) =>
         {
             Busqueda.SetBounds(caja.Padding.Left, Math.Max(0, (caja.ClientSize.Height - Busqueda.PreferredHeight) / 2),
@@ -230,7 +245,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
             filtro.AccessibleDescription = filtros.Visible ? "Filtros desplegados" : "Filtros contraídos";
         };
         barra.Controls.Add(filtro, 1, 0);
-        Button consultar = ControlesRegistro.Boton("Consultar");
+        Button consultar = ControlesRegistro.Boton(etiquetaConsulta);
         consultar.Anchor = AnchorStyles.Left;
         consultar.Click += (_, _) => Consultar?.Invoke();
         barra.Controls.Add(consultar, 2, 0);
@@ -247,12 +262,10 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
             columna.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
             columna.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             var etiqueta = Rotulo(nombre);
-            campo.Dock = DockStyle.Fill;
-            campo.AccessibleName = nombre;
-            campo.Margin = Padding.Empty;
-            if (campo is TextBox) campo.KeyDown += BuscarConEnter;
             columna.Controls.Add(etiqueta, 0, 0);
-            columna.Controls.Add(campo, 0, 1);
+            if (campo is TextBox) campo.KeyDown += BuscarConEnter;
+            var borde = CampoCitorna.Enmarcar(campo, nombre);
+            columna.Controls.Add(borde, 0, 1);
             filtros.Controls.Add(columna);
         }
         Button restablecer = ControlesRegistro.Boton("Restablecer");
@@ -391,10 +404,34 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
 
     internal T? Registro(int indice) => indice >= 0 && indice < registros.Count ? registros[indice] : null;
 
+    internal void ConfigurarAccionesCuenta(Func<T, bool> permitirBorrado, Action<T> cambiarPassword,
+        Func<T, bool> tieneBloqueo, Action<T> desbloquearCuenta)
+    {
+        puedeEliminar = permitirBorrado;
+        accionFichaAdicional = ControlesRegistro.Boton("Cambiar contraseña");
+        accionFichaAdicional.Click += (_, _) =>
+        {
+            if (Seleccion is { } elegido) cambiarPassword(elegido);
+        };
+        accionesFicha.WrapContents = true;
+        accionesFicha.Controls.Add(accionFichaAdicional);
+        accionesFicha.Controls.SetChildIndex(accionFichaAdicional, 1);
+        puedeDesbloquear = tieneBloqueo;
+        desbloquear = ControlesRegistro.Boton("Desbloquear");
+        desbloquear.Click += (_, _) =>
+        {
+            if (Seleccion is { } elegido) desbloquearCuenta(elegido);
+        };
+        accionesFicha.Controls.Add(desbloquear);
+        accionesFicha.Controls.SetChildIndex(desbloquear, 2);
+        ((TableLayoutPanel)accionesFicha.Parent!).RowStyles[2].Height = 112;
+        ActualizarAcciones();
+    }
+
     internal void ActualizarPermisos()
     {
-        bool consultar = SesionActual.TienePermiso(PermisosSistema.Consultar);
-        nuevo.Visible = consultar && SesionActual.TienePermiso(PermisosSistema.Agregar);
+        bool consultar = SesionActual.TienePermiso(permisoConsulta);
+        nuevo.Visible = consultar && SesionActual.TienePermiso(permisoNuevo);
         if (AccionExtra != null) AccionExtra.Visible = consultar;
         ActualizarAcciones();
     }
@@ -408,11 +445,27 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
     private void ActualizarAcciones()
     {
         nuevo.Enabled = !ocupado;
-        bool seleccion = Seleccion != null && SesionActual.TienePermiso(PermisosSistema.Consultar);
-        editar.Visible = seleccion && SesionActual.TienePermiso(PermisosSistema.Modificar);
+        T? elegido = Seleccion;
+        bool seleccion = elegido != null && SesionActual.TienePermiso(permisoConsulta);
+        bool modificar = seleccion && SesionActual.TienePermiso(PermisosSistema.Modificar);
+        bool disponible = !ocupado && !consultando && datosVigentes;
+        editar.Visible = modificar;
         eliminar.Visible = seleccion && SesionActual.TienePermiso(PermisosSistema.Eliminar);
-        editar.Enabled = eliminar.Enabled = !ocupado && !consultando && datosVigentes;
+        editar.Enabled = disponible;
+        eliminar.Enabled = disponible && elegido != null && (puedeEliminar?.Invoke(elegido) ?? true);
+        if (accionFichaAdicional != null)
+        {
+            accionFichaAdicional.Visible = modificar;
+            accionFichaAdicional.Enabled = disponible;
+        }
+        if (desbloquear != null)
+        {
+            desbloquear.Visible = modificar && elegido != null && puedeDesbloquear?.Invoke(elegido) == true;
+            desbloquear.Enabled = disponible;
+        }
     }
+
+    protected override void OnPaintBackground(PaintEventArgs e) => FondoInterfaces.Pintar(this, e);
 
     protected override void OnResize(EventArgs e)
     {
@@ -461,7 +514,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
 
     internal async void Cargar(Func<(List<T> Datos, Action? AlAplicar)> buscar, bool filtrada, int? id = null, bool sinSeleccion = false)
     {
-        if (destruido || !SesionActual.VerificarPermiso(PermisosSistema.Consultar, $"consultar {plural}")) return;
+        if (destruido || !SesionActual.VerificarPermiso(permisoConsulta, $"consultar {plural}")) return;
         pendiente = new Solicitud(buscar, filtrada, sinSeleccion ? null : id, !sinSeleccion && id == null);
         datosVigentes = false;
         MostrarEstado(registros.Count > 0 ? "Actualizando resultados…" : $"Cargando {plural}…");
@@ -479,7 +532,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
                 {
                     var resultado = await Task.Run(solicitud.Buscar);
                     long consultaMs = reloj.ElapsedMilliseconds;
-                    if (destruido || pendiente != null || !SesionActual.TienePermiso(PermisosSistema.Consultar)) continue;
+                    if (destruido || pendiente != null || !SesionActual.TienePermiso(permisoConsulta)) continue;
                     resultado.AlAplicar?.Invoke();
                     AplicarResultados(resultado.Datos, solicitud);
                     Trace.TraceInformation("Citorna {0}: consulta {1} ms, aplicación {2} ms, {3} filas.",
@@ -490,7 +543,7 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
                     Trace.TraceWarning("Citorna {0}: {1}", plural, ex.GetType().Name);
                     if (!destruido && pendiente == null)
                         MostrarEstado(registros.Count == 0 ? $"No se pudieron cargar los {plural}."
-                            : "No se pudo actualizar. Se conservan los resultados anteriores.", "Reintentar", () => Consultar?.Invoke());
+                            : "No se pudo actualizar. Se conservan los resultados anteriores.", "Reintentar", () => (ReintentarConsulta ?? Consultar)?.Invoke());
                 }
             }
         }
@@ -547,26 +600,36 @@ internal sealed class VistaRegistros<T> : UserControl where T : class
 
     internal async Task EliminarConfirmadoAsync(string nombre, Func<ResultadoOperacion> ejecutar, Action actualizar)
     {
-        if (ocupado || !SesionActual.VerificarPermiso(PermisosSistema.Eliminar, $"eliminar {plural}")) return;
+        if (ocupado || !SesionActual.VerificarPermiso(permisoConsulta, $"eliminar {plural}")
+            || !SesionActual.VerificarPermiso(PermisosSistema.Eliminar, $"eliminar {plural}")) return;
         if (MessageBox.Show(FindForm(), $"¿Eliminar {nombre}? Esta acción no se puede deshacer.",
             "Confirmar eliminación", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
             return;
+        await EjecutarOperacionAsync("Eliminar", ejecutar, resultado =>
+        {
+            if (resultado.Exitoso)
+                actualizar();
+            else
+                MessageBox.Show(FindForm(), resultado.Mensaje, $"Eliminar {singular}", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        });
+    }
+
+    internal async Task EjecutarOperacionAsync(string titulo, Func<ResultadoOperacion> ejecutar,
+        Action<ResultadoOperacion> presentar)
+    {
+        if (ocupado) return;
         ocupado = true;
         ActualizarAcciones();
         try
         {
             ResultadoOperacion resultado = await Task.Run(ejecutar);
-            if (destruido) return;
-            if (resultado.Exitoso)
-                actualizar();
-            else
-                MessageBox.Show(FindForm(), resultado.Mensaje, $"Eliminar {singular}", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (!destruido) presentar(resultado);
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning("Citorna, eliminar {0}: {1}", singular, ex.GetType().Name);
-            if (!destruido) MessageBox.Show(FindForm(), "No se pudo eliminar el registro. Vuelva a intentarlo.",
-                $"Eliminar {singular}", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Trace.TraceWarning("Citorna, {0} {1}: {2}", titulo, singular, ex.GetType().Name);
+            if (!destruido) MessageBox.Show(FindForm(), "No se pudo completar la operación. Vuelva a intentarlo.",
+                $"{titulo} {singular}", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
