@@ -34,15 +34,7 @@ internal sealed class AgendaRepository
             WHERE Fecha >= @inicioMes AND Fecha <= @finMes
             GROUP BY Fecha;
 
-            SELECT cita.HoraInicio, CONCAT(cliente.Nombres, ' ', cliente.Apellidos),
-                   servicio.Nombre, estado.Nombre
-            FROM dbo.Citas cita
-            JOIN dbo.Clientes cliente ON cliente.IdCliente = cita.IdCliente
-            JOIN dbo.Servicios servicio ON servicio.IdServicio = cita.IdServicio
-            JOIN dbo.EstadosCita estado ON estado.IdEstadoCita = cita.IdEstadoCita
-            WHERE cita.Fecha = @seleccion
-            ORDER BY cita.HoraInicio, cita.IdCita;
-            """;
+            """ + "\n" + CitaRepository.ConsultaDelDia;
         comando.Parameters.Add("@hoy", SqlDbType.Date).Value = hoy.Date;
         comando.Parameters.Add("@inicioMes", SqlDbType.Date).Value = inicioMes;
         comando.Parameters.Add("@finMes", SqlDbType.Date).Value =
@@ -61,11 +53,9 @@ internal sealed class AgendaRepository
         while (await lector.ReadAsync(cancelacion).ConfigureAwait(false))
             dias.Add(lector.GetDateTime(0), lector.GetInt64(1));
 
-        List<CitaDelDia> citas = new();
         await lector.NextResultAsync(cancelacion).ConfigureAwait(false);
-        while (await lector.ReadAsync(cancelacion).ConfigureAwait(false))
-            citas.Add(new(lector.GetTimeSpan(0), lector.GetString(1), lector.GetString(2), lector.GetString(3)));
-
-        return new(total, pendientes, confirmadas, dias, citas);
+        List<Cita> citas = await CitaRepository.LeerCitasAsync(lector, cancelacion).ConfigureAwait(false);
+        return new(total, pendientes, confirmadas, dias,
+            citas.ConvertAll(cita => new CitaDelDia(cita.HoraInicio.ToTimeSpan(), cita.Cliente, cita.Servicio, cita.Estado)));
     }
 }
